@@ -1,0 +1,12 @@
+<RCC>
+    <qresource>
+        <file>../../data/bitmaps/cursor_bc.xpm</file>
+        <file>../../data/bitmaps/cursor_bl.xpm</file>
+        <file>../../data/bitmaps/cursor_br.xpm</file>
+        <file>../../data/bitmaps/cursor_cl.xpm</file>
+        <file>../../data/bitmaps/cursor_cr.xpm</file>
+        <file>../../data/bitmaps/cursor_tc.xpm</file>
+        <file>../../data/bitmaps/cursor_tl.xpm</file>
+        <file>../../data/bitmaps/cursor_tr.xpm</file>
+    </qresource>
+</RCC>
