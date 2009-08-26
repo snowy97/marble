@@ -726,16 +726,15 @@ bool MarbleWidgetDefaultInputHandler::eventFilter( QObject* o, QEvent* e )
             MarbleWidget *marbleWidget = MarbleWidgetInputHandler::d->m_widget;
             marbleWidget->setViewContext( Animation );
 
-            int steps = wheelevt->delta() / 3;
-            qreal zoom = marbleWidget->zoom();
-            qreal target = MarbleWidgetInputHandler::d->m_wheelZoomTargetDistance;
-            if ( marbleWidget->animationsEnabled() && target > 0.0 ) {
-                // Do not use intermediate (interpolated) distance values caused by animations
-                zoom = marbleWidget->map()->zoomFromDistance( target );
+            const qreal angle = 45.0/M_PI * (qreal)wheelevt->delta() / (qreal)marbleWidget->radius();
+            switch ( wheelevt->orientation() ) {
+            case Qt::Horizontal:
+              marbleWidget->rotateBy( angle, 0.0 );
+              break;
+            case Qt::Vertical:
+              marbleWidget->rotateBy( 0.0, angle );
+              break;
             }
-            qreal newDistance = marbleWidget->map()->distanceFromZoom( zoom + steps );
-            MarbleWidgetInputHandler::d->m_wheelZoomTargetDistance = newDistance;
-            d->ZoomAt(MarbleWidgetInputHandler::d->m_widget, wheelevt->pos(), newDistance);
 
             MarbleWidgetInputHandler::d->m_mouseWheelTimer->start( 400 );
             return true;
