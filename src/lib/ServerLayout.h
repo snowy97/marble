@@ -126,6 +126,16 @@ private:
     static QString encodeQuadTree( const Marble::TileId & );
 };
 
+class SignedXYZServerLayout : public ServerLayout
+{
+public:
+    SignedXYZServerLayout( GeoSceneTexture *textureLayer );
+
+    virtual QUrl downloadUrl( const QUrl &, const Marble::TileId & ) const;
+
+    virtual QString name() const;
+};
+
 }
 
 #endif

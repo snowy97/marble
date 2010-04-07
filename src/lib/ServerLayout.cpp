@@ -229,4 +229,25 @@ QString QuadTreeServerLayout::encodeQuadTree( const Marble::TileId &id )
     return tileNum;
 }
 
+SignedXYZServerLayout::SignedXYZServerLayout( GeoSceneTexture *textureLayer )
+    : ServerLayout( textureLayer )
+{
+}
+
+QUrl SignedXYZServerLayout::downloadUrl( const QUrl &url, const Marble::TileId &id ) const
+{
+    QString strUrl = url.toString();
+
+    strUrl.replace( "{z}", QString::number( id.zoomLevel() + 1 ) );
+    strUrl.replace( "{x}", QString::number( id.x() ) );
+    strUrl.replace( "{y}", QString::number( ( numTilesY( id ) / 2 ) - 1 - id.y() ) );
+
+    return QUrl::fromEncoded( strUrl.toLatin1() );
+}
+
+QString SignedXYZServerLayout::name() const
+{
+    return "SignedXYZ";
+}
+
 }
