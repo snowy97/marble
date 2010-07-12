@@ -20,92 +20,35 @@
 // Qt
 #include <QtCore/QByteArray>
 #include <QtCore/QDateTime>
-#include <QtCore/QFile>
-#include <QtCore/QMutexLocker>
 #include <QtCore/QRegExp>
 
 using namespace Marble;
 
-QHash<QString, WeatherData::WeatherCondition> BBCParser::dayConditions
-        = QHash<QString, WeatherData::WeatherCondition>();
-QHash<QString, WeatherData::WeatherCondition> BBCParser::nightConditions
-        = QHash<QString, WeatherData::WeatherCondition>();
-QHash<QString, WeatherData::WindDirection> BBCParser::windDirections
-        = QHash<QString, WeatherData::WindDirection>();
-QHash<QString, WeatherData::PressureDevelopment> BBCParser::pressureDevelopments
-        = QHash<QString, WeatherData::PressureDevelopment>();
-QHash<QString, WeatherData::Visibility> BBCParser::visibilityStates
-        = QHash<QString, WeatherData::Visibility>();
-QHash<QString, int> BBCParser::monthNames
-        = QHash<QString, int>();
+QHash<QString, WeatherData::WeatherCondition> const BBCParser::dayConditions
+        = BBCParser::setupDayConditions();
+QHash<QString, WeatherData::WeatherCondition> const BBCParser::nightConditions
+        = BBCParser::setupNightConditions();
+QHash<QString, WeatherData::WindDirection> const BBCParser::windDirections
+        = BBCParser::setupWindDirections();
+QHash<QString, WeatherData::PressureDevelopment> const BBCParser::pressureDevelopments
+        = BBCParser::setupPressureDevelopments();
+QHash<QString, WeatherData::Visibility> const BBCParser::visibilityStates
+        = BBCParser::setupVisibilityStates();
+QHash<QString, int> const BBCParser::monthNames
+        = BBCParser::setupMonthNames();
 
-BBCParser::BBCParser( QObject *parent )
-        : AbstractWorkerThread( parent )
+BBCParser::BBCParser( QList<WeatherData> &list )
+        : m_list( &list )
 {
-    BBCParser::setupHashes();
 }
 
 BBCParser::~BBCParser()
 {
 }
 
-BBCParser *BBCParser::instance()
+bool BBCParser::read( const QByteArray &data )
 {
-    static BBCParser parser;
-    return &parser;
-}
-
-void BBCParser::scheduleRead( const QString& path,
-                              BBCWeatherItem *item,
-                              const QString& type )
-{
-    ScheduleEntry entry;
-    entry.path = path;
-    entry.item = item;
-    entry.type = type;
-
-    m_scheduleMutex.lock();
-    m_schedule.push( entry );
-    m_scheduleMutex.unlock();
-
-    ensureRunning();
-}
-
-bool BBCParser::workAvailable()
-{
-    QMutexLocker locker( &m_scheduleMutex );
-    return !m_schedule.isEmpty();
-}
-
-void BBCParser::work()
-{
-    m_scheduleMutex.lock();
-    ScheduleEntry entry = m_schedule.pop();
-    m_scheduleMutex.unlock();
-
-    QFile file( entry.path );
-    if( !file.open( QIODevice::ReadOnly | QIODevice::Text ) ) {
-        return;
-    }
-
-    QList<WeatherData> data = read( &file );
-
-    if( !data.isEmpty() && !entry.item.isNull() ) {
-        if ( entry.type == "bbcobservation" ) {
-            entry.item->setCurrentWeather( data.at( 0 ) );
-        }
-        else if ( entry.type == "bbcforecast" ) {
-            entry.item->addForecastWeather( data );
-        }
-
-        emit parsedFile();
-    }
-}
-
-QList<WeatherData> BBCParser::read( QIODevice *device )
-{
-    m_list.clear();
-    setDevice( device );
+    addData( data );
 
     while ( !atEnd() ) {
         readNext();
@@ -118,7 +61,7 @@ QList<WeatherData> BBCParser::read( QIODevice *device )
         }
     }
 
-    return m_list;
+    return !error();
 }
 
 void BBCParser::readUnknownElement()
@@ -201,7 +144,7 @@ void BBCParser::readItem()
         }
     }
     
-    m_list.append( item );
+    m_list->append( item );
 }
 
 void BBCParser::readDescription( WeatherData *data )
@@ -431,17 +374,9 @@ void BBCParser::readPubDate( WeatherData *data )
     }
 }
 
-void BBCParser::setupHashes()
+QHash<QString, WeatherData::WeatherCondition> BBCParser::setupDayConditions()
 {
-    if( !( ( dayConditions.isEmpty() )
-           || ( nightConditions.isEmpty() )
-           || ( windDirections.isEmpty() )
-           || ( pressureDevelopments.isEmpty() )
-           || ( visibilityStates.isEmpty() )
-           || ( monthNames.isEmpty() ) ) )
-    {
-        return;
-    }
+    QHash<QString, WeatherData::WeatherCondition> dayConditions;
 
     dayConditions["sunny"] = WeatherData::ClearDay;
     dayConditions["clear"] = WeatherData::ClearDay;
@@ -490,7 +425,14 @@ void BBCParser::setupHashes()
     dayConditions["sandstorm"] = WeatherData::SandStorm;
     dayConditions["na"] = WeatherData::ConditionNotAvailable;
     dayConditions["N/A"] = WeatherData::ConditionNotAvailable;
-    
+
+    return dayConditions;
+}
+
+QHash<QString, WeatherData::WeatherCondition> BBCParser::setupNightConditions()
+{
+    QHash<QString, WeatherData::WeatherCondition> nightConditions;
+
     nightConditions["sunny"] = WeatherData::ClearNight;
     nightConditions["clear"] = WeatherData::ClearNight;
     nightConditions["clear sky"] = WeatherData::ClearNight;
@@ -539,6 +481,13 @@ void BBCParser::setupHashes()
     nightConditions["na"] = WeatherData::ConditionNotAvailable;
     nightConditions["N/A"] = WeatherData::ConditionNotAvailable;
 
+    return nightConditions;
+}
+
+QHash<QString, WeatherData::WindDirection> BBCParser::setupWindDirections()
+{
+    QHash<QString, WeatherData::WindDirection> windDirections;
+
     windDirections["N"] = WeatherData::N;
     windDirections["NE"] = WeatherData::NE;
     windDirections["ENE"] = WeatherData::ENE;
@@ -557,11 +506,25 @@ void BBCParser::setupHashes()
     windDirections["WSW"] = WeatherData::WSW;
     windDirections["N/A"] = WeatherData::DirectionNotAvailable;
 
+    return windDirections;
+}
+
+QHash<QString, WeatherData::PressureDevelopment> BBCParser::setupPressureDevelopments()
+{
+    QHash<QString, WeatherData::PressureDevelopment> pressureDevelopments;
+
     pressureDevelopments["falling"] = WeatherData::Falling;
     pressureDevelopments["no change"] = WeatherData::NoChange;
     pressureDevelopments["steady"] = WeatherData::NoChange;
     pressureDevelopments["rising"] = WeatherData::Rising;
     pressureDevelopments["N/A"] = WeatherData::PressureDevelopmentNotAvailable;
+
+    return pressureDevelopments;
+}
+
+QHash<QString, WeatherData::Visibility> BBCParser::setupVisibilityStates()
+{
+    QHash<QString, WeatherData::Visibility> visibilityStates;
 
     visibilityStates["excellent"] = WeatherData::VeryGood;
     visibilityStates["very good"] = WeatherData::VeryGood;
@@ -571,6 +534,13 @@ void BBCParser::setupHashes()
     visibilityStates["very poor"] = WeatherData::VeryPoor;
     visibilityStates["fog"] = WeatherData::Fog;
     visibilityStates["n/a"] = WeatherData::VisibilityNotAvailable;
+
+    return visibilityStates;
+}
+
+QHash<QString, int> BBCParser::setupMonthNames()
+{
+    QHash<QString, int> monthNames;
 
     monthNames["Jan"] = 1;
     monthNames["Feb"] = 2;
@@ -584,6 +554,8 @@ void BBCParser::setupHashes()
     monthNames["Oct"] = 10;
     monthNames["Nov"] = 11;
     monthNames["Dec"] = 12;
+
+    return monthNames;
 }
 
 #include "BBCParser.moc"

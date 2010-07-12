@@ -56,10 +56,18 @@ QString BBCWeatherItem::service() const
     return QString( "BBC" );
 }
 
-void BBCWeatherItem::addDownloadedFile( const QString& url, const QString& type )
+void BBCWeatherItem::addDownloadedFile( const QByteArray& data, const QString& type )
 {
-    if( type == "bbcobservation" || type == "bbcforecast" ) {
-        BBCParser::instance()->scheduleRead( url, this, type );
+    if( type == "bbcobservation" ) {
+        QList<WeatherData> list;
+        BBCParser parser( list );
+        parser.read( data );
+        setCurrentWeather( list.at( 0 ) );
+    } else if ( type == "bbcforecast" ) {
+        QList<WeatherData> list;
+        BBCParser parser( list );
+        parser.read( data );
+        addForecastWeather( list );
     }
 }
 

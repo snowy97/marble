@@ -334,19 +334,9 @@ QString AbstractDataPluginModel::generateFilename( const QString& id, const QStr
     return name;
 }
 
-QString AbstractDataPluginModel::generateFilepath( const QString& id, const QString& type ) const
-{
-    return MarbleDirs::localPath() + "/cache/" + d->m_name + '/' + generateFilename( id, type );
-}
-    
-bool AbstractDataPluginModel::fileExists( const QString& fileName ) const
-{
-    return d->m_downloadManager->storagePolicy()->fileExists( fileName );
-}
-
 bool AbstractDataPluginModel::fileExists( const QString& id, const QString& type ) const
 {
-    return fileExists( generateFilename( id, type ) );
+    return d->m_downloadManager->storagePolicy()->fileExists( generateFilename( id, type ) );
 }
 
 AbstractDataPluginItem *AbstractDataPluginModel::findItem( const QString& id ) const
@@ -419,9 +409,10 @@ void AbstractDataPluginModel::processFinishedJob( const QString& relativeUrlStri
 {
     Q_UNUSED( relativeUrlString );
     
+    CacheStoragePolicy *storagePolicy
+            = qobject_cast<CacheStoragePolicy*>( d->m_downloadManager->storagePolicy() );
+
     if( id.startsWith( descriptionPrefix ) ) {
-        CacheStoragePolicy *storagePolicy
-                = qobject_cast<CacheStoragePolicy*>( d->m_downloadManager->storagePolicy() );
         if ( storagePolicy ) {
             parseFile( storagePolicy->data( id ) );
         }
@@ -446,9 +437,11 @@ void AbstractDataPluginModel::processFinishedJob( const QString& relativeUrlStri
             if( itemId != (*i)->id() ) {
                 return;
             }
-            
-            (*i)->addDownloadedFile( generateFilepath( itemId, fileType ), 
-                                     fileType );
+
+            if (storagePolicy) {
+                (*i)->addDownloadedFile( storagePolicy->data( id ),
+                                        fileType );
+            }
 
             d->m_downloadingItems.erase( i );
         }

@@ -42,7 +42,7 @@ class WikipediaItem : public AbstractDataPluginItem
      
     bool initialized();
     
-    void addDownloadedFile( const QString& url, const QString& type );
+    void addDownloadedFile( const QByteArray& data, const QString& type );
     
     void paint( GeoPainter *painter, ViewportParams *viewport,
                 const QString& renderPos, GeoSceneLayer * layer = 0 );

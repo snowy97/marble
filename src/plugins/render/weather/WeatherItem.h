@@ -55,7 +55,7 @@ class WeatherItem : public AbstractDataPluginItem
      
     bool initialized();
     
-    virtual void addDownloadedFile( const QString& url, const QString& type ) = 0;
+    virtual void addDownloadedFile( const QByteArray& data, const QString& type ) = 0;
                          
     bool operator<( const AbstractDataPluginItem *other ) const;
     

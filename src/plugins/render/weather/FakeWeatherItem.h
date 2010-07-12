@@ -25,7 +25,7 @@ class FakeWeatherItem : public WeatherItem
     ~FakeWeatherItem();
     
     QString service() const;
-    void addDownloadedFile( const QString& url, const QString& type );
+    void addDownloadedFile( const QByteArray& data, const QString& type );
 };
 
 } // namespace Marble

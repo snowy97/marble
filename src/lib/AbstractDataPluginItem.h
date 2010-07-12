@@ -65,7 +65,7 @@ class MARBLE_EXPORT AbstractDataPluginItem : public QObject, public GeoGraphicsI
 
     virtual bool initialized() = 0;
     
-    virtual void addDownloadedFile( const QString& url, const QString& type );
+    virtual void addDownloadedFile( const QByteArray& data, const QString& type );
 
     virtual bool isGeoProjected();
                          

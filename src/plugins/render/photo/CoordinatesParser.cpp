@@ -21,9 +21,9 @@ CoordinatesParser::CoordinatesParser( GeoDataCoordinates *coordinates )
 {
 }
 
-bool CoordinatesParser::read( QIODevice *device )
+bool CoordinatesParser::read( const QByteArray &data )
 {
-    setDevice( device );
+    addData( data );
     
     while( !atEnd() ) {
         readNext();

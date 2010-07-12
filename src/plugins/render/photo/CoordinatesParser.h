@@ -25,7 +25,7 @@ class CoordinatesParser : public QXmlStreamReader
 public:
     CoordinatesParser( GeoDataCoordinates *coordinates );
 
-    bool read( QIODevice *device );
+    bool read( const QByteArray &data );
 
 private:
     void readUnknownElement();

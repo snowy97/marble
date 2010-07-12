@@ -29,7 +29,6 @@
 // Qt
 #include <QtGui/QAction>
 #include <QtGui/QIcon>
-#include <QtCore/QFile>
 #include <QtCore/QHash>
 #include <QtCore/QUrl>
 #include <QtGui/QMouseEvent>
@@ -67,7 +66,7 @@ bool PhotoPluginItem::initialized()
     return !m_smallImage.isNull() && m_hasCoordinates;
 }
 
-void PhotoPluginItem::addDownloadedFile( const QString& url, const QString& type )
+void PhotoPluginItem::addDownloadedFile( const QByteArray& data, const QString& type )
 {
     if( type == "thumbnail" ) {
         if ( !m_image ) {
@@ -77,19 +76,14 @@ void PhotoPluginItem::addDownloadedFile( const QString& url, const QString& type
             layout->addItem( m_image, 0, 0 );
             setLayout( layout );
         }
-        m_smallImage.load( url );
+        m_smallImage.loadFromData( data );
         m_image->setImage( m_smallImage );
     }
     else if ( type == "info" ) {        
-        QFile file( url );
-        if( !file.open( QIODevice::ReadOnly | QIODevice::Text ) ) {
-            return;
-        }
-        
         GeoDataCoordinates coordinates;
         CoordinatesParser parser( &coordinates );
         
-        if( parser.read( &file ) ) {
+        if( parser.read( data ) ) {
             setCoordinate( coordinates );
             m_hasCoordinates = true;
         }

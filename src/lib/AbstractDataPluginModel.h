@@ -128,16 +128,6 @@ class MARBLE_EXPORT AbstractDataPluginModel : public QObject
     QString generateFilename( const QString& id, const QString& type ) const;
     
     /**
-     * Generates the absolute filepath of the from @p id and @p type
-     */
-    QString generateFilepath( const QString& id, const QString& type ) const;
-    
-    /**
-     * Testing the existence of the file @p fileName
-     */
-    bool fileExists( const QString& fileName ) const;
-    
-    /**
      * Testing the existence of a file with @p id and @p type
      */
     bool fileExists( const QString& id, const QString& type ) const;

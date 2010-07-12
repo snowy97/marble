@@ -69,13 +69,10 @@ bool WikipediaItem::initialized()
     return true;
 }
     
-void WikipediaItem::addDownloadedFile( const QString& url, const QString& type )
+void WikipediaItem::addDownloadedFile( const QByteArray& data, const QString& type )
 {
-    Q_UNUSED( url )
-    Q_UNUSED( type )
-
     if ( type == "thumbnail" ) {
-        m_thumbnail.load( url );
+        m_thumbnail.loadFromData( data );
         updateSize();
         emit updated();
     }

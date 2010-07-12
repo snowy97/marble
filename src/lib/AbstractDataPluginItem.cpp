@@ -97,9 +97,9 @@ QAction *AbstractDataPluginItem::action()
     return 0;
 }
 
-void AbstractDataPluginItem::addDownloadedFile( const QString& url, const QString& type )
+void AbstractDataPluginItem::addDownloadedFile( const QByteArray& data, const QString& type )
 {
-    Q_UNUSED( url )
+    Q_UNUSED( data )
     Q_UNUSED( type )
 }
 

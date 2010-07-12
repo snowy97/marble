@@ -28,7 +28,7 @@ class BBCWeatherItem : public WeatherItem
     virtual bool request( const QString& type );
 
     QString service() const;
-    void addDownloadedFile( const QString& url, const QString& type );
+    void addDownloadedFile( const QByteArray& data, const QString& type );
     
     QUrl observationUrl() const;
     QUrl forecastUrl() const;
