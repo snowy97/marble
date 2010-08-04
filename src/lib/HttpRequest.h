@@ -11,8 +11,8 @@
 // Copyright 2008      Pino Toscano <pino@kde.org>
 //
 
-#ifndef MARBLE_HTTPJOB_H
-#define MARBLE_HTTPJOB_H
+#ifndef MARBLE_HTTPREQUEST_H
+#define MARBLE_HTTPREQUEST_H
 
 #include <QtCore/QByteArray>
 #include <QtCore/QObject>
@@ -25,15 +25,15 @@
 
 namespace Marble
 {
-class HttpJobPrivate;
+class HttpRequestPrivate;
 
-class MARBLE_EXPORT HttpJob: public QObject
+class MARBLE_EXPORT HttpRequest: public QObject
 {
     Q_OBJECT
 
  public:
-    HttpJob( const QUrl & sourceUrl, const QString & destFileName, const QString &id );
-    ~HttpJob();
+    HttpRequest( const QUrl & sourceUrl, const QString & destFileName, const QString &id );
+    ~HttpRequest();
 
     QUrl sourceUrl() const;
     void setSourceUrl( const QUrl & );
@@ -57,22 +57,22 @@ class MARBLE_EXPORT HttpJob: public QObject
     /**
      * errorCode contains 0, if there was no error and 1 otherwise
      */
-    void jobDone( HttpJob *, int errorCode );
-    void redirected( HttpJob * job, QUrl redirectionTarget );
+    void requestDone( HttpRequest *, int errorCode );
+    void redirected( HttpRequest * request, QUrl redirectionTarget );
 
     /**
      * This signal is emitted if the data was successfully received and
      * the argument data contains completely the downloaded content.
      */
-    void dataReceived( HttpJob * job, QByteArray data );
+    void dataReceived( HttpRequest * request, QByteArray data );
 
  public Q_SLOTS:
     virtual void execute() = 0;
 
  private:
-    Q_DISABLE_COPY( HttpJob )
-    HttpJobPrivate *const d;
-    friend class HttpJobPrivate;
+    Q_DISABLE_COPY( HttpRequest )
+    HttpRequestPrivate *const d;
+    friend class HttpRequestPrivate;
 };
 
 }

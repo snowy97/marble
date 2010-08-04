@@ -11,17 +11,17 @@
 // Copyright 2008      Pino Toscano <pino@kde.org>
 //
 
-#include "HttpJob.h"
+#include "HttpRequest.h"
 #include "TinyWebBrowser.h"
 
 #include <QtCore/QDebug>
 
 using namespace Marble;
 
-class Marble::HttpJobPrivate
+class Marble::HttpRequestPrivate
 {
  public:
-    HttpJobPrivate( const QUrl & sourceUrl, const QString & destFileName, const QString &id );
+    HttpRequestPrivate( const QUrl & sourceUrl, const QString & destFileName, const QString &id );
 
     QUrl           m_sourceUrl;
     QString        m_destinationFileName;
@@ -31,7 +31,7 @@ class Marble::HttpJobPrivate
     QString m_pluginId;
 };
 
-HttpJobPrivate::HttpJobPrivate( const QUrl & sourceUrl, const QString & destFileName,
+HttpRequestPrivate::HttpRequestPrivate( const QUrl & sourceUrl, const QString & destFileName,
                                 const QString &id )
     : m_sourceUrl( sourceUrl ),
       m_destinationFileName( destFileName ),
@@ -45,47 +45,47 @@ HttpJobPrivate::HttpJobPrivate( const QUrl & sourceUrl, const QString & destFile
 }
 
 
-HttpJob::HttpJob( const QUrl & sourceUrl, const QString & destFileName, const QString &id )
-    : d( new HttpJobPrivate( sourceUrl, destFileName, id ))
+HttpRequest::HttpRequest( const QUrl & sourceUrl, const QString & destFileName, const QString &id )
+    : d( new HttpRequestPrivate( sourceUrl, destFileName, id ))
 {
 }
 
-HttpJob::~HttpJob()
+HttpRequest::~HttpRequest()
 {
     delete d;
 }
 
-QUrl HttpJob::sourceUrl() const
+QUrl HttpRequest::sourceUrl() const
 {
     return d->m_sourceUrl;
 }
 
-void HttpJob::setSourceUrl( const QUrl &url )
+void HttpRequest::setSourceUrl( const QUrl &url )
 {
     d->m_sourceUrl = url;
 }
 
-QString HttpJob::initiatorId() const
+QString HttpRequest::initiatorId() const
 {
     return d->m_initiatorId;
 }
 
-void HttpJob::setInitiatorId( const QString &id )
+void HttpRequest::setInitiatorId( const QString &id )
 {
     d->m_initiatorId = id;
 }
 
-QString HttpJob::destinationFileName() const
+QString HttpRequest::destinationFileName() const
 {
     return d->m_destinationFileName;
 }
 
-void HttpJob::setDestinationFileName( const QString &fileName )
+void HttpRequest::setDestinationFileName( const QString &fileName )
 {
     d->m_destinationFileName = fileName;
 }
 
-bool HttpJob::tryAgain()
+bool HttpRequest::tryAgain()
 {
     if( d->m_trialsLeft > 0 ) {
 	d->m_trialsLeft--;
@@ -96,22 +96,22 @@ bool HttpJob::tryAgain()
     }
 }
 
-DownloadUsage HttpJob::downloadUsage() const
+DownloadUsage HttpRequest::downloadUsage() const
 {
     return d->m_downloadUsage;
 }
 
-void HttpJob::setDownloadUsage( const DownloadUsage usage )
+void HttpRequest::setDownloadUsage( const DownloadUsage usage )
 {
     d->m_downloadUsage = usage;
 }
 
-void HttpJob::setUserAgentPluginId( const QString & pluginId ) const
+void HttpRequest::setUserAgentPluginId( const QString & pluginId ) const
 {
     d->m_pluginId = pluginId;
 }
 
-QByteArray HttpJob::userAgent() const
+QByteArray HttpRequest::userAgent() const
 {
     switch ( d->m_downloadUsage ) {
     case DownloadBrowse:
@@ -126,4 +126,4 @@ QByteArray HttpJob::userAgent() const
     }
 }
 
-#include "HttpJob.moc"
+#include "HttpRequest.moc"

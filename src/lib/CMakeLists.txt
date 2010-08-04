@@ -87,7 +87,7 @@ set(marblewidget_SRCS
     GeoPainter.cpp
     GeoPolygon.cpp
     HttpDownloadManager.cpp
-    HttpJob.cpp
+    HttpRequest.cpp
     NetworkPlugin.cpp
     LayerManager.cpp
     PluginManager.cpp

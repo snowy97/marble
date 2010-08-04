@@ -35,7 +35,7 @@ class QNamNetworkPlugin: public NetworkPlugin
     virtual bool isInitialized() const;
 
     // NetworkPluginInterface abstract methods
-    virtual HttpJob * createJob( const QUrl &source, const QString &destination,
+    virtual HttpRequest * createRequest( const QUrl &source, const QString &destination,
                                  const QString &id );
 
     // NetworkPlugin abstract methods

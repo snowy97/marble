@@ -14,7 +14,7 @@
 #include <QtCore/QUrl>
 #include <QtNetwork/QNetworkAccessManager>
 
-#include "QNamDownloadJob.h"
+#include "QNamDownloadRequest.h"
 
 namespace Marble
 {
@@ -64,13 +64,13 @@ bool QNamNetworkPlugin::isInitialized() const
     return true;
 }
 
-HttpJob * QNamNetworkPlugin::createJob( const QUrl & sourceUrl,
+HttpRequest * QNamNetworkPlugin::createRequest( const QUrl & sourceUrl,
                                         const QString & destination,
                                         const QString & id )
 {
-    HttpJob * const job = new QNamDownloadJob( sourceUrl, destination, id, m_networkAccessManager );
-    job->setUserAgentPluginId( "QNamNetworkPlugin" );
-    return job;
+    HttpRequest * const request = new QNamDownloadRequest( sourceUrl, destination, id, m_networkAccessManager );
+    request->setUserAgentPluginId( "QNamNetworkPlugin" );
+    return request;
 }
 
 NetworkPlugin * QNamNetworkPlugin::newInstance() const

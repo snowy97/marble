@@ -21,7 +21,7 @@ class QUrl;
 namespace Marble
 {
 
-class HttpJob;
+class HttpRequest;
 
 /**
  * @short The interface for network operation plugins.
@@ -33,10 +33,10 @@ class NetworkPluginInterface: public PluginInterface
     virtual ~NetworkPluginInterface();
 
     /**
-     * @brief Creates a new HTTP download job.
-     * @return the new HTTP job
+     * @brief Creates a new HTTP download request.
+     * @return the new HTTP request
      */
-    virtual HttpJob *createJob( const QUrl &source, const QString &destination, const QString &id ) = 0;
+    virtual HttpRequest *createRequest( const QUrl &source, const QString &destination, const QString &id ) = 0;
 };
 
 }

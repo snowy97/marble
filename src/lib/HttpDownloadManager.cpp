@@ -18,7 +18,7 @@
 
 #include "DownloadPolicy.h"
 #include "DownloadQueueSet.h"
-#include "HttpJob.h"
+#include "HttpRequest.h"
 #include "MarbleDebug.h"
 #include "StoragePolicy.h"
 #include "NetworkPlugin.h"
@@ -36,7 +36,7 @@ class HttpDownloadManager::Private
                       PluginManager *pluginManager );
     ~Private();
 
-    HttpJob *createJob( const QUrl& sourceUrl, const QString& destFileName,
+    HttpRequest *createRequest( const QUrl& sourceUrl, const QString& destFileName,
                         const QString &id );
     DownloadQueueSet *findQueues( const QString& hostName, const DownloadUsage usage );
 
@@ -82,7 +82,7 @@ HttpDownloadManager::Private::~Private()
     delete m_networkPlugin;
 }
 
-HttpJob *HttpDownloadManager::Private::createJob( const QUrl& sourceUrl,
+HttpRequest *HttpDownloadManager::Private::createRequest( const QUrl& sourceUrl,
                                                   const QString& destFileName,
                                                   const QString &id )
 {
@@ -100,7 +100,7 @@ HttpJob *HttpDownloadManager::Private::createJob( const QUrl& sourceUrl,
         }
     }
     Q_ASSERT( m_networkPlugin );
-    return m_networkPlugin->createJob( sourceUrl, destFileName, id );
+    return m_networkPlugin->createRequest( sourceUrl, destFileName, id );
 }
 
 DownloadQueueSet *HttpDownloadManager::Private::findQueues( const QString& hostName,
@@ -166,11 +166,11 @@ void HttpDownloadManager::addJob( const QUrl& sourceUrl, const QString& destFile
         return;
 
     DownloadQueueSet * const queueSet = d->findQueues( sourceUrl.host(), usage );
-    if ( queueSet->canAcceptJob( sourceUrl, destFileName )) {
-        HttpJob * const job = d->createJob( sourceUrl, destFileName, id );
-        if ( job ) {
-            job->setDownloadUsage( usage );
-            queueSet->addJob( job );
+    if ( queueSet->canAcceptRequest( sourceUrl, destFileName )) {
+        HttpRequest * const request = d->createRequest( sourceUrl, destFileName, id );
+        if ( request ) {
+            request->setDownloadUsage( usage );
+            queueSet->addRequest( request );
         }
     }
 }
@@ -198,7 +198,7 @@ void HttpDownloadManager::requeue()
     QList<QPair<DownloadPolicyKey, DownloadQueueSet *> >::iterator pos = d->m_queueSets.begin();
     QList<QPair<DownloadPolicyKey, DownloadQueueSet *> >::iterator const end = d->m_queueSets.end();
     for (; pos != end; ++pos ) {
-        (*pos).second->retryJobs();
+        (*pos).second->retryRequests();
     }
 }
 
@@ -218,14 +218,14 @@ void HttpDownloadManager::connectDefaultQueueSets()
 
 void HttpDownloadManager::connectQueueSet( DownloadQueueSet * queueSet )
 {
-    connect( queueSet, SIGNAL( jobFinished( QByteArray, QString, QString )),
+    connect( queueSet, SIGNAL( requestFinished( QByteArray, QString, QString )),
              SLOT( finishJob( QByteArray, QString, QString )));
-    connect( queueSet, SIGNAL( jobRetry() ), SLOT( startRetryTimer() ));
-    connect( queueSet, SIGNAL( jobRedirected( QUrl, QString, QString, DownloadUsage )),
+    connect( queueSet, SIGNAL( requestRetry() ), SLOT( startRetryTimer() ));
+    connect( queueSet, SIGNAL( requestRedirected( QUrl, QString, QString, DownloadUsage )),
              SLOT( addJob( QUrl, QString, QString, DownloadUsage )));
     // relay jobAdded/jobRemoved signals (interesting for progress bar)
-    connect( queueSet, SIGNAL( jobAdded() ), SIGNAL( jobAdded() ));
-    connect( queueSet, SIGNAL( jobRemoved() ), SIGNAL( jobRemoved() ));
+    connect( queueSet, SIGNAL( requestAdded() ), SIGNAL( jobAdded() ));
+    connect( queueSet, SIGNAL( requestRemoved() ), SIGNAL( jobRemoved() ));
 }
 
 bool HttpDownloadManager::hasDownloadPolicy( const DownloadPolicy& policy ) const

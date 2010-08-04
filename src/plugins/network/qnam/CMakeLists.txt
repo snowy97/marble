@@ -7,7 +7,7 @@ INCLUDE_DIRECTORIES(
 )
 INCLUDE(${QT_USE_FILE})
 
-set( qnam_SRCS QNamDownloadJob.cpp
+set( qnam_SRCS QNamDownloadRequest.cpp
                QNamNetworkPlugin.cpp )
 
 marble_add_plugin( QNamNetworkPlugin ${qnam_SRCS} )

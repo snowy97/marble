@@ -13,7 +13,7 @@
 
 #include <QtNetwork/QNetworkReply>
 
-#include "HttpJob.h"
+#include "HttpRequest.h"
 
 
 class QNetworkAccessManager;
@@ -21,15 +21,15 @@ class QNetworkAccessManager;
 namespace Marble
 {
 
-class QNamDownloadJob: public HttpJob
+class QNamDownloadRequest: public HttpRequest
 {
     Q_OBJECT
 
  public:
-    QNamDownloadJob( const QUrl & sourceUrl, const QString & destFileName,
+    QNamDownloadRequest( const QUrl & sourceUrl, const QString & destFileName,
                      const QString & id, QNetworkAccessManager * const );
 
-    // HttpJob abstract method
+    // HttpRequest abstract method
     virtual void execute();
 
  public Q_SLOTS:

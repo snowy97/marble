@@ -30,7 +30,6 @@ namespace Marble
 
 class DownloadPolicy;
 class DownloadQueueSet;
-class HttpJob;
 class PluginManager;
 class StoragePolicy;
 

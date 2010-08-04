@@ -8,7 +8,7 @@
 // Copyright 2009 Jens-Michael Hoffmann <jensmh@gmx.de>
 //
 
-#include "QNamDownloadJob.h"
+#include "QNamDownloadRequest.h"
 
 #include "MarbleDebug.h"
 #include <QtNetwork/QNetworkAccessManager>
@@ -17,17 +17,17 @@
 namespace Marble
 {
 
-QNamDownloadJob::QNamDownloadJob( const QUrl & sourceUrl,
+QNamDownloadRequest::QNamDownloadRequest( const QUrl & sourceUrl,
                                   const QString & destFileName,
                                   const QString & id,
                                   QNetworkAccessManager * const networkAccessManager )
-    : HttpJob( sourceUrl, destFileName, id ),
+    : HttpRequest( sourceUrl, destFileName, id ),
       m_networkAccessManager( networkAccessManager ),
       m_networkReply( 0 )
 {
 }
 
-void QNamDownloadJob::execute()
+void QNamDownloadRequest::execute()
 {
     QNetworkRequest request( sourceUrl() );
 #if QT_VERSION >= 0x40600
@@ -44,7 +44,7 @@ void QNamDownloadJob::execute()
              SLOT( finished()));
 }
 
-void QNamDownloadJob::downloadProgress( qint64 bytesReceived, qint64 bytesTotal )
+void QNamDownloadRequest::downloadProgress( qint64 bytesReceived, qint64 bytesTotal )
 {
     Q_UNUSED(bytesReceived);
     Q_UNUSED(bytesTotal);
@@ -52,12 +52,12 @@ void QNamDownloadJob::downloadProgress( qint64 bytesReceived, qint64 bytesTotal 
 //              << bytesReceived << '/' << bytesTotal;
 }
 
-void QNamDownloadJob::error( QNetworkReply::NetworkError code )
+void QNamDownloadRequest::error( QNetworkReply::NetworkError code )
 {
     mDebug() << "error" << destinationFileName() << code;
 }
 
-void QNamDownloadJob::finished()
+void QNamDownloadRequest::finished()
 {
     QNetworkReply::NetworkError const error = m_networkReply->error();
 //     mDebug() << "finished" << destinationFileName()
@@ -87,7 +87,7 @@ void QNamDownloadJob::finished()
         break;
 
     default:
-        emit jobDone( this, 1 );
+        emit requestDone( this, 1 );
     }
 
     m_networkReply->disconnect( this );
@@ -98,4 +98,4 @@ void QNamDownloadJob::finished()
 
 }
 
-#include "QNamDownloadJob.moc"
+#include "QNamDownloadRequest.moc"

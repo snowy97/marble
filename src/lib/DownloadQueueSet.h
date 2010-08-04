@@ -28,37 +28,37 @@
 namespace Marble
 {
 
-class HttpJob;
+class HttpRequest;
 
 /**
-   Life of a HttpJob
+   Life of a HttpRequest
    =================
-   - Job is added to the QueueSet (by calling addJob() )
-     the HttpJob is put into the m_jobQueue where it waits for "activation"
-     signal jobAdded is emitted
-   - Job is activated
-     Job is moved from m_jobQueue to m_activeJobs and signals of the job
+   - Request is added to the QueueSet (by calling addRequest() )
+     the HttpRequest is put into the m_requestQueue where it waits for "activation"
+     signal requestAdded is emitted
+   - Request is activated
+     Request is moved from m_requestQueue to m_activeRequests and signals of the request
      are connected to slots (local or HttpDownloadManager)
-     Job is executed by calling the jobs execute() method
+     Request is executed by calling the requests execute() method
 
    now there are different possibilities:
-   1) Job emits jobDone (some error occurred, or canceled (kio))
-      Job is disconnected
-      signal jobRemoved is emitted
-      Job is either moved from m_activeJobs to m_retryQueue
+   1) Request emits requestDone (some error occurred, or canceled (kio))
+      Request is disconnected
+      signal requestRemoved is emitted
+      Request is either moved from m_activeRequests to m_retryQueue
         or destroyed and blacklisted
 
-   2) Job emits redirected
-      Job is removed from m_activeJobs, disconnected and destroyed
-      signal jobRemoved is emitted
-      (HttpDownloadManager creates new Job with new source url)
+   2) Request emits redirected
+      Request is removed from m_activeRequests, disconnected and destroyed
+      signal requestRemoved is emitted
+      (HttpDownloadManager creates new Request with new source url)
 
-   3) Job emits dataReceived
-      Job is removed from m_activeJobs, disconnected and destroyed
-      signal jobRemoved is emitted
+   3) Request emits dataReceived
+      Request is removed from m_activeRequests, disconnected and destroyed
+      signal requestRemoved is emitted
 
    so we can conclude following rules:
-   - Job is only connected to signals when in "active" state
+   - Request is only connected to signals when in "active" state
 
 
    questions:
@@ -81,64 +81,64 @@ class DownloadQueueSet: public QObject
     DownloadPolicy downloadPolicy() const;
     void setDownloadPolicy( const DownloadPolicy& );
 
-    bool canAcceptJob( const QUrl& sourceUrl,
+    bool canAcceptRequest( const QUrl& sourceUrl,
                        const QString& destinationFileName ) const;
-    void addJob( HttpJob * const job );
+    void addRequest( HttpRequest * const request );
 
-    void activateJobs();
-    void retryJobs();
+    void activateRequests();
+    void retryRequests();
 
  Q_SIGNALS:
-    void jobAdded();
-    void jobRemoved();
-    void jobRetry();
-    void jobFinished( const QByteArray& data, const QString& destinationFileName,
+    void requestAdded();
+    void requestRemoved();
+    void requestRetry();
+    void requestFinished( const QByteArray& data, const QString& destinationFileName,
                       const QString& id );
-    void jobRedirected( const QUrl& newSourceUrl, const QString& destinationFileName,
+    void requestRedirected( const QUrl& newSourceUrl, const QString& destinationFileName,
                         const QString& id, DownloadUsage );
 
  private Q_SLOTS:
-    void finishJob( HttpJob * job, const QByteArray& data );
-    void redirectJob( HttpJob * job, const QUrl& newSourceUrl );
-    void retryOrBlacklistJob( HttpJob * job, const int errorCode );
+    void finishRequest( HttpRequest * request, const QByteArray& data );
+    void redirectRequest( HttpRequest * request, const QUrl& newSourceUrl );
+    void retryOrBlacklistRequest( HttpRequest * request, const int errorCode );
 
  private:
-    void activateJob( HttpJob * const job );
-    void deactivateJob( HttpJob * const job );
-    bool jobIsActive( const QString& destinationFileName ) const;
-    bool jobIsQueued( const QString& destinationFileName ) const;
-    bool jobIsWaitingForRetry( const QString& destinationFileName ) const;
-    bool jobIsBlackListed( const QUrl& sourceUrl ) const;
+    void activateRequest( HttpRequest * const request );
+    void deactivateRequest( HttpRequest * const request );
+    bool requestIsActive( const QString& destinationFileName ) const;
+    bool requestIsQueued( const QString& destinationFileName ) const;
+    bool requestIsWaitingForRetry( const QString& destinationFileName ) const;
+    bool requestIsBlackListed( const QUrl& sourceUrl ) const;
 
     DownloadPolicy m_downloadPolicy;
 
-    /** This is the first stage a job enters, from this queue it will get
-     *  into the activatedJobs container.
+    /** This is the first stage a request enters, from this queue it will get
+     *  into the activatedRequests container.
      */
-    class JobStack
+    class RequestStack
     {
     public:
         bool contains( const QString& destinationFileName ) const;
         int count() const;
         bool isEmpty() const;
-        HttpJob * pop();
-        void push( HttpJob * const );
+        HttpRequest * pop();
+        void push( HttpRequest * const );
     private:
-        QStack<HttpJob*> m_jobs;
-        QSet<QString> m_jobsContent;
+        QStack<HttpRequest*> m_requests;
+        QSet<QString> m_requestsContent;
     };
-    JobStack m_jobs;
+    RequestStack m_requests;
 
-    /// Contains the jobs which are currently being downloaded.
-    QList<HttpJob*> m_activeJobs;
+    /// Contains the requests which are currently being downloaded.
+    QList<HttpRequest*> m_activeRequests;
 
-    /** Contains jobs which failed to download and which are scheduled for
+    /** Contains requests which failed to download and which are scheduled for
      *  retry according to retry settings.
      */
-    QQueue<HttpJob*> m_retryQueue;
+    QQueue<HttpRequest*> m_retryQueue;
 
     /// Contains the blacklisted source urls
-    QSet<QString> m_jobBlackList;
+    QSet<QString> m_requestBlackList;
 };
 
 }
