@@ -101,7 +101,7 @@ void DownloadQueueSet::retryJobs()
     }
 }
 
-void DownloadQueueSet::finishJob( HttpJob * job, const QByteArray& data )
+void DownloadQueueSet::finishJob( const QByteArray& data, HttpJob * job )
 {
     mDebug() << "finishJob: " << job->sourceUrl() << job->destinationFileName();
 
@@ -112,7 +112,7 @@ void DownloadQueueSet::finishJob( HttpJob * job, const QByteArray& data )
     activateJobs();
 }
 
-void DownloadQueueSet::redirectJob( HttpJob * job, const QUrl& newSourceUrl )
+void DownloadQueueSet::redirectJob( const QUrl& newSourceUrl, HttpJob * job )
 {
     mDebug() << "jobRedirected:" << job->sourceUrl() << " -> " << newSourceUrl;
 
@@ -123,7 +123,7 @@ void DownloadQueueSet::redirectJob( HttpJob * job, const QUrl& newSourceUrl )
     job->deleteLater();
 }
 
-void DownloadQueueSet::retryOrBlacklistJob( HttpJob * job, const int errorCode )
+void DownloadQueueSet::retryOrBlacklistJob( const int errorCode, HttpJob * job )
 {
     Q_ASSERT( errorCode != 0 );
     Q_ASSERT( !m_retryQueue.contains( job ));
@@ -156,12 +156,12 @@ void DownloadQueueSet::activateJob( HttpJob * const job )
 {
     m_activeJobs.push_back( job );
 
-    connect( job, SIGNAL( jobDone( HttpJob *, int )),
-             SLOT( retryOrBlacklistJob( HttpJob *, int )));
-    connect( job, SIGNAL( redirected( HttpJob *, QUrl )),
-             SLOT( redirectJob( HttpJob *, QUrl )));
-    connect( job, SIGNAL( dataReceived( HttpJob *, QByteArray )),
-             SLOT( finishJob( HttpJob *, QByteArray )));
+    connect( job, SIGNAL( jobDone( int, HttpJob * )),
+             SLOT( retryOrBlacklistJob( int, HttpJob * )));
+    connect( job, SIGNAL( redirected( QUrl, HttpJob * )),
+             SLOT( redirectJob( QUrl, HttpJob * )));
+    connect( job, SIGNAL( dataReceived( QByteArray, HttpJob * )),
+             SLOT( finishJob( QByteArray, HttpJob * )));
 
     job->execute();
 }

@@ -57,14 +57,14 @@ class MARBLE_EXPORT HttpJob: public QObject
     /**
      * errorCode contains 0, if there was no error and 1 otherwise
      */
-    void jobDone( HttpJob *, int errorCode );
-    void redirected( HttpJob * job, QUrl redirectionTarget );
+    void jobDone( int errorCode, HttpJob * );
+    void redirected( QUrl redirectionTarget, HttpJob * job );
 
     /**
      * This signal is emitted if the data was successfully received and
      * the argument data contains completely the downloaded content.
      */
-    void dataReceived( HttpJob * job, QByteArray data );
+    void dataReceived( QByteArray data, HttpJob * job );
 
  public Q_SLOTS:
     virtual void execute() = 0;

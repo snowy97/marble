@@ -76,18 +76,18 @@ void QNamDownloadJob::finished()
         const QVariant redirectionAttribute =
             m_networkReply->attribute( QNetworkRequest::RedirectionTargetAttribute );
         if ( !redirectionAttribute.isNull() ) {
-            emit redirected( this, redirectionAttribute.toUrl() );
+            emit redirected( redirectionAttribute.toUrl(), this );
         }
         else {
             // no redirection occurred
             const QByteArray data = m_networkReply->readAll();
-            emit dataReceived( this, data );
+            emit dataReceived( data, this );
         }
     }
         break;
 
     default:
-        emit jobDone( this, 1 );
+        emit jobDone( 1, this );
     }
 
     m_networkReply->disconnect( this );

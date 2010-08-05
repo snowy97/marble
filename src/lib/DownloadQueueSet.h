@@ -98,9 +98,9 @@ class DownloadQueueSet: public QObject
                         const QString& id, DownloadUsage );
 
  private Q_SLOTS:
-    void finishJob( HttpJob * job, const QByteArray& data );
-    void redirectJob( HttpJob * job, const QUrl& newSourceUrl );
-    void retryOrBlacklistJob( HttpJob * job, const int errorCode );
+    void finishJob( const QByteArray& data, HttpJob * job );
+    void redirectJob( const QUrl& newSourceUrl, HttpJob * job );
+    void retryOrBlacklistJob( const int errorCode, HttpJob * job );
 
  private:
     void activateJob( HttpJob * const job );
