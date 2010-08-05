@@ -77,46 +77,6 @@ QSharedPointer<TextureTile> TileLoader::loadTile( TileId const & stackedTileId,
     return tile;
 }
 
-// This method loads a tile from the filesystem and additionally triggers a
-// download of that tile (without checking expiration). It is called by upper
-// layer (StackedTileLoader) when the tile that should be reloaded is not
-// currently loaded in memory.
-// It is (theoretically) used for map refresh/reload (F5 key) and will be used
-// for the (hopefully) coming download region feature.
-//
-// post condition
-//     - tile object is being returned, with download triggered,
-//       pointer is kept in m_waitingForUpdate until tile is downloaded
-QSharedPointer<TextureTile> TileLoader::reloadTile( TileId const & stackedTileId,
-                                                    TileId const & tileId,
-                                                    DownloadUsage const usage )
-{
-    QSharedPointer<TextureTile> tile =
-        m_waitingForUpdate.value( tileId, QSharedPointer<TextureTile>() );
-    if ( tile )
-        // tile is being downloaded already and waiting for update,
-        // no need to reload 2 times => just return the tile
-        return tile;
-
-    QString const fileName = tileFileName( tileId );
-    QImage const image( fileName );
-    if ( !image.isNull() ) {
-        tile = QSharedPointer<TextureTile>( new TextureTile( tileId, new QImage( image ) ));
-        tile->setLastModified( QFileInfo( fileName ).lastModified() );
-    }
-    else {
-        QImage * const replacementTile = scaledLowerLevelTile( tileId );
-        tile = QSharedPointer<TextureTile>( new TextureTile( tileId, replacementTile ));
-    }
-
-    GeoSceneTexture const * const textureLayer = findTextureLayer( tileId );
-    tile->setExpireSecs( textureLayer->expire() );
-    tile->setStackedTileId( stackedTileId );
-    m_waitingForUpdate.insert( tileId, tile );
-    triggerDownload( tileId, usage );
-    return tile;
-}
-
 // This method triggers a download of the given tile (without checking
 // expiration). It is called by upper layer (StackedTileLoader) when the tile
 // that should be reloaded is currently loaded in memory.

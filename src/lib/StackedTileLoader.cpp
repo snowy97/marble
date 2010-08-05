@@ -263,8 +263,9 @@ StackedTile* StackedTileLoader::reloadTile( TileId const & stackedTileId,
         GeoSceneTexture const * const textureLayer = *pos;
         TileId const tileId( textureLayer->sourceDir(), stackedTileId.zoomLevel(),
                              stackedTileId.x(), stackedTileId.y() );
-        QSharedPointer<TextureTile> const tile = d->m_tileLoader->reloadTile( stackedTileId, tileId,
+        QSharedPointer<TextureTile> const tile = d->m_tileLoader->loadTile( stackedTileId, tileId,
                                                                               usage );
+        d->m_tileLoader->reloadTile( tile, usage );
         if ( tile ) {
             tile->setBlending( textureLayer->blending() );
             tiles.append( tile );

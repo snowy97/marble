@@ -43,8 +43,6 @@ class TileLoader: public QObject
 
     QSharedPointer<TextureTile> loadTile( TileId const & stackedTileId, TileId const & tileId,
                                           DownloadUsage const );
-    QSharedPointer<TextureTile> reloadTile( TileId const & stackedTileId, TileId const & tileId,
-                                            DownloadUsage const );
     void reloadTile( QSharedPointer<TextureTile> const & tile, DownloadUsage const );
     void downloadTile( TileId const & tileId );
 
