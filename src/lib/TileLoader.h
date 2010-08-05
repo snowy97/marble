@@ -54,9 +54,6 @@ class TileLoader: public QObject
     void updateTile( QByteArray const & imageData, QString const & tileId );
 
  Q_SIGNALS:
-    void downloadTile( QUrl const & sourceUrl, QString const & destinationFileName,
-                       QString const & id, DownloadUsage );
-
     // when this signal is emitted, the TileLoader gives up ownership of
     // the corrsponding tile. Might be better to explicitly transfer...
     void tileCompleted( TileId const & composedTileId, TileId const & baseTileId );
@@ -66,6 +63,8 @@ class TileLoader: public QObject
     QString tileFileName( TileId const & ) const;
     void triggerDownload( TileId const &, DownloadUsage const );
     QImage * scaledLowerLevelTile( TileId const & );
+
+    HttpDownloadManager * const m_downloadManager;
 
     // TODO: comment about uint hash key
     QHash<uint, GeoSceneTexture const *> m_textureLayers;

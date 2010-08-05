@@ -30,9 +30,8 @@ namespace Marble
 {
 
 TileLoader::TileLoader( HttpDownloadManager * const downloadManager )
+    : m_downloadManager( downloadManager )
 {
-    connect( this, SIGNAL( downloadTile( QUrl, QString, QString, DownloadUsage )),
-             downloadManager, SLOT( addJob( QUrl, QString, QString, DownloadUsage )));
     connect( downloadManager, SIGNAL( downloadComplete( QByteArray, QString )),
              SLOT( updateTile( QByteArray, QString )));
 }
@@ -176,7 +175,7 @@ void TileLoader::triggerDownload( TileId const & id, DownloadUsage const usage )
     GeoSceneTexture const * const textureLayer = findTextureLayer( id );
     QUrl const sourceUrl = textureLayer->downloadUrl( id );
     QString const destFileName = textureLayer->relativeTileFileName( id );
-    emit downloadTile( sourceUrl, destFileName, id.toString(), usage );
+    m_downloadManager->addJob( sourceUrl, destFileName, id.toString(), usage );
 }
 
     // TODO: get lastModified time stamp into the TextureTile
