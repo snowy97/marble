@@ -34,6 +34,18 @@ class HttpJob;
 class PluginManager;
 class StoragePolicy;
 
+class MARBLE_EXPORT HttpDownloadJob : public QObject
+{
+    Q_OBJECT
+
+public:
+    HttpDownloadJob(QObject* parent = 0) : QObject( parent ) {}
+
+public Q_SLOTS:
+    virtual void execute( const QByteArray &data ) = 0;
+    virtual void error( int ) { deleteLater(); }
+};
+
 /**
  * @Short This class manages scheduled downloads. 
 
@@ -78,16 +90,19 @@ class MARBLE_EXPORT HttpDownloadManager : public QObject
     void addJob( const QUrl& sourceUrl, const QString& destFilename, const QString &id,
                  const DownloadUsage usage );
 
+    /**
+     * Adds a new job with a sourceUrl, destination file name and given id.
+     */
+    void addJob( const QUrl& sourceUrl, const QString& destFilename, HttpDownloadJob *job,
+                 const DownloadUsage usage );
+
 
  Q_SIGNALS:
-    void downloadComplete( QString, QString );
-
     /**
-     * This signal is emitted if a file is downloaded and the data argument
-     * contains the files content. The HttpDownloadManager takes care to save
-     * it using the given storage policy.
+     * This signal is emitted if a file was sucessfully downloaded.
+     * The HttpDownloadManager takes care to save it using the given storage policy.
      */
-    void downloadComplete( QByteArray data, QString initiatorId );
+    void downloadComplete( QString, QString );
 
     /**
      * Signal is emitted when a new job is added to the queue.

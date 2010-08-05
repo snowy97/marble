@@ -23,6 +23,7 @@
 
 #include "TileId.h"
 #include "global.h"
+#include "HttpDownloadManager.h"
 
 class QByteArray;
 class QImage;
@@ -48,9 +49,6 @@ class TileLoader: public QObject
 
     void setTextureLayers( QHash<uint, GeoSceneTexture const *> const & );
 
- public Q_SLOTS:
-    void updateTile( QByteArray const & imageData, QString const & tileId );
-
  Q_SIGNALS:
     // when this signal is emitted, the TileLoader gives up ownership of
     // the corrsponding tile. Might be better to explicitly transfer...
@@ -59,7 +57,7 @@ class TileLoader: public QObject
  private:
     GeoSceneTexture const * findTextureLayer( TileId const & ) const;
     QString tileFileName( TileId const & ) const;
-    void triggerDownload( TileId const &, DownloadUsage const );
+    void triggerDownload( QSharedPointer<TextureTile> tile, DownloadUsage const );
     QImage * scaledLowerLevelTile( TileId const & );
 
     HttpDownloadManager * const m_downloadManager;
@@ -67,9 +65,24 @@ class TileLoader: public QObject
     // TODO: comment about uint hash key
     QHash<uint, GeoSceneTexture const *> m_textureLayers;
 
-    // contains tiles, for which a download has been triggered
-    // because the tile was not there at all or is expired.
-    QHash<TileId, QSharedPointer<TextureTile> > m_waitingForUpdate;
+    class Job;
+};
+
+class TileLoader::Job : public HttpDownloadJob
+{
+    Q_OBJECT
+
+public:
+    Job( QSharedPointer<TextureTile> tile, QObject * parent = 0 );
+
+public Q_SLOTS:
+    virtual void execute( QByteArray const & data );
+
+Q_SIGNALS:
+    void tileCompleted( TileId const & composedTileId, TileId const & baseTileId );
+
+private:
+    QSharedPointer<TextureTile> m_tile;
 };
 
 inline void TileLoader::setTextureLayers( QHash<uint, GeoSceneTexture const *> const & layers )

@@ -32,8 +32,6 @@ namespace Marble
 TileLoader::TileLoader( HttpDownloadManager * const downloadManager )
     : m_downloadManager( downloadManager )
 {
-    connect( downloadManager, SIGNAL( downloadComplete( QByteArray, QString )),
-             SLOT( updateTile( QByteArray, QString )));
 }
 
 // If the tile is locally available:
@@ -59,8 +57,7 @@ QSharedPointer<TextureTile> TileLoader::loadTile( TileId const & stackedTileId,
             mDebug() << "TileLoader::loadTile" << tileId.toString() << "StateUptodate";
         } else {
             mDebug() << "TileLoader::loadTile" << tileId.toString() << "StateExpired";
-            m_waitingForUpdate.insert( tileId, tile );
-            triggerDownload( tileId, usage );
+            triggerDownload( tile, usage );
         }
         return tile;
     }
@@ -71,8 +68,7 @@ QSharedPointer<TextureTile> TileLoader::loadTile( TileId const & stackedTileId,
     QSharedPointer<TextureTile> const tile( new TextureTile( tileId, replacementTile ));
     tile->setStackedTileId( stackedTileId );
 
-    m_waitingForUpdate.insert( tileId, tile );
-    triggerDownload( tileId, usage );
+    triggerDownload( tile, usage );
 
     return tile;
 }
@@ -82,39 +78,35 @@ QSharedPointer<TextureTile> TileLoader::loadTile( TileId const & stackedTileId,
 // that should be reloaded is currently loaded in memory.
 //
 // post condition
-//     - download is triggered, but only if not in progress (indicated by
-//       m_waitingForUpdate)
+//     - download is triggered
 void TileLoader::reloadTile( QSharedPointer<TextureTile> const & tile, DownloadUsage const usage )
 {
-    if ( m_waitingForUpdate.contains( tile->id() ))
-        return;
-    m_waitingForUpdate.insert( tile->id(), tile );
-    triggerDownload( tile->id(), usage );
+    triggerDownload( tile, usage );
 }
 
-void TileLoader::downloadTile( TileId const & tileId )
+void TileLoader::downloadTile( TileId const & id )
 {
-    triggerDownload( tileId, DownloadBulk );
+    GeoSceneTexture const * const textureLayer = m_textureLayers.value( id.mapThemeIdHash(), 0 );
+    QUrl const url = textureLayer->downloadUrl( id );
+    QString const destFileName = textureLayer->relativeTileFileName( id );
+    m_downloadManager->addJob( url, destFileName, id.toString(), DownloadBulk );
 }
 
-void TileLoader::updateTile( QByteArray const & data, QString const & tileId )
+TileLoader::Job::Job( QSharedPointer< TextureTile > tile, QObject* parent )
+    : HttpDownloadJob( parent )
+    , m_tile( tile )
 {
-    TileId const id = TileId::fromString( tileId );
-    QSharedPointer<TextureTile> const tile =
-        m_waitingForUpdate.value( id, QSharedPointer<TextureTile>() );
-    // preliminary fix for reload map crash
-    // TODO: fix properly
-    if ( !tile )
-        return;
-    Q_ASSERT( tile );
-    m_waitingForUpdate.remove( id );
+}
+
+void TileLoader::Job::execute( QByteArray const & data )
+{
     QImage *image( new QImage( QImage::fromData( data ) ) );
     if ( image->isNull() )
         return;
 
-    tile->setImage( image );
-    tile->setLastModified( QDateTime::currentDateTime() );
-    emit tileCompleted( tile->stackedTileId(), id );
+    m_tile->setImage( image );
+    m_tile->setLastModified( QDateTime::currentDateTime() );
+    emit tileCompleted( m_tile->stackedTileId(), m_tile->id() );
 }
 
 inline GeoSceneTexture const * TileLoader::findTextureLayer( TileId const & id ) const
@@ -130,12 +122,14 @@ QString TileLoader::tileFileName( TileId const & tileId ) const
     return MarbleDirs::path( textureLayer->relativeTileFileName( tileId ));
 }
 
-void TileLoader::triggerDownload( TileId const & id, DownloadUsage const usage )
+void TileLoader::triggerDownload( QSharedPointer<TextureTile> tile, DownloadUsage const usage )
 {
-    GeoSceneTexture const * const textureLayer = findTextureLayer( id );
-    QUrl const sourceUrl = textureLayer->downloadUrl( id );
-    QString const destFileName = textureLayer->relativeTileFileName( id );
-    m_downloadManager->addJob( sourceUrl, destFileName, id.toString(), usage );
+    GeoSceneTexture const * const textureLayer = findTextureLayer( tile->id() );
+    QUrl const sourceUrl = textureLayer->downloadUrl( tile->id() );
+    QString const destFileName = textureLayer->relativeTileFileName( tile->id() );
+    Job * job = new Job( tile );
+    connect( job, SIGNAL(tileCompleted(TileId,TileId)), this, SIGNAL(tileCompleted(TileId,TileId)));
+    m_downloadManager->addJob( sourceUrl, destFileName, job, usage );
 }
 
     // TODO: get lastModified time stamp into the TextureTile

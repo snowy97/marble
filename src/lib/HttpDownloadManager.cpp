@@ -175,11 +175,29 @@ void HttpDownloadManager::addJob( const QUrl& sourceUrl, const QString& destFile
     }
 }
 
+void HttpDownloadManager::addJob( const QUrl& sourceUrl, const QString& destFileName,
+                                  HttpDownloadJob *downloadJob, const DownloadUsage usage )
+{
+    if ( !d->m_downloadEnabled )
+        return;
+
+    DownloadQueueSet * const queueSet = d->findQueues( sourceUrl.host(), usage );
+    if ( queueSet->canAcceptJob( sourceUrl, destFileName )) {
+        HttpJob * const job = d->createJob( sourceUrl, destFileName, "" );
+        connect( job, SIGNAL(dataReceived( QByteArray, HttpJob * )), downloadJob, SLOT(execute( QByteArray )));
+        connect( job, SIGNAL(jobDone(int,HttpJob*)), downloadJob, SLOT(error(int)));
+        connect( job, SIGNAL(destroyed( QObject * )), downloadJob, SLOT( deleteLater() ));
+        if ( job ) {
+            job->setDownloadUsage( usage );
+            queueSet->addJob( job );
+        }
+    }
+}
+
 void HttpDownloadManager::finishJob( const QByteArray& data, const QString& destinationFileName,
                                      const QString& id )
 {
     mDebug() << "emitting downloadComplete( QByteArray, " << id << ")";
-    emit downloadComplete( data, id );
     if ( d->m_storagePolicy ) {
         const bool saved = d->m_storagePolicy->updateFile( destinationFileName, data );
         if ( saved ) {
