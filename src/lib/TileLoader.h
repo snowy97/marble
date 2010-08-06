@@ -31,6 +31,8 @@ class QUrl;
 
 namespace Marble
 {
+
+class Blending;
 class HttpDownloadManager; // remove?
 class GeoSceneTexture;
 class TextureTile;
@@ -40,14 +42,15 @@ class TileLoader: public QObject
     Q_OBJECT
 
  public:
-    TileLoader( HttpDownloadManager * const );
+    TileLoader( GeoSceneTexture const * textureLayer, HttpDownloadManager * const );
 
     QSharedPointer<TextureTile> loadTile( TileId const & stackedTileId, TileId const & tileId,
                                           DownloadUsage const );
     void reloadTile( QSharedPointer<TextureTile> const & tile, DownloadUsage const );
     void downloadTile( TileId const & tileId );
 
-    void setTextureLayers( QHash<uint, GeoSceneTexture const *> const & );
+    QString sourceDir() const;
+    Blending const * blending() const;
 
  Q_SIGNALS:
     // when this signal is emitted, the TileLoader gives up ownership of
@@ -55,15 +58,13 @@ class TileLoader: public QObject
     void tileCompleted( TileId const & composedTileId, TileId const & baseTileId );
 
  private:
-    GeoSceneTexture const * findTextureLayer( TileId const & ) const;
     QString tileFileName( TileId const & ) const;
     void triggerDownload( QSharedPointer<TextureTile> tile, DownloadUsage const );
     QImage * scaledLowerLevelTile( TileId const & );
 
-    HttpDownloadManager * const m_downloadManager;
+    GeoSceneTexture const * m_textureLayer;
 
-    // TODO: comment about uint hash key
-    QHash<uint, GeoSceneTexture const *> m_textureLayers;
+    HttpDownloadManager * const m_downloadManager;
 
     class Job;
 };
@@ -84,11 +85,6 @@ Q_SIGNALS:
 private:
     QSharedPointer<TextureTile> m_tile;
 };
-
-inline void TileLoader::setTextureLayers( QHash<uint, GeoSceneTexture const *> const & layers )
-{
-    m_textureLayers = layers;
-}
 
 }
 

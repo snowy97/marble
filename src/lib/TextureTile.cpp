@@ -18,15 +18,16 @@
 #include <limits>
 
 #include <QtCore/QString>
+#include <GeoSceneTexture.h>
 
 namespace Marble
 {
 
-TextureTile::TextureTile( TileId const & tileId, QImage const * image )
+TextureTile::TextureTile( TileId const & tileId, QImage const * image, GeoSceneTexture const *textureLayer )
     : m_id( tileId ),
-      m_blending( 0 ),
       m_expireSecs( std::numeric_limits<int>::max() ),
-      m_image( image )
+      m_image( image ),
+      m_textureLayer( textureLayer )
 {
     Q_ASSERT( image );
     Q_ASSERT( !image->isNull() );
@@ -35,6 +36,11 @@ TextureTile::TextureTile( TileId const & tileId, QImage const * image )
 TextureTile::~TextureTile()
 {
     delete m_image;
+}
+
+Blending const * TextureTile::blending() const
+{
+    return m_textureLayer->blending();
 }
 
 }

@@ -29,8 +29,9 @@
 namespace Marble
 {
 
-TileLoader::TileLoader( HttpDownloadManager * const downloadManager )
-    : m_downloadManager( downloadManager )
+TileLoader::TileLoader( GeoSceneTexture const * textureLayer, HttpDownloadManager * const downloadManager )
+    : m_textureLayer( textureLayer )
+    , m_downloadManager( downloadManager )
 {
 }
 
@@ -44,14 +45,13 @@ QSharedPointer<TextureTile> TileLoader::loadTile( TileId const & stackedTileId,
 {
     QString const fileName = tileFileName( tileId );
     QImage const image( fileName );
-    if ( !image.isNull() ) {
+    if ( !image.isNull() && image.size() == m_textureLayer->tileSize() ) {
         // file is there, so create and return a tile object in any case,
         // but check if an update should be triggered
-        GeoSceneTexture const * const textureLayer = findTextureLayer( tileId );
-        QSharedPointer<TextureTile> const tile( new TextureTile( tileId, new QImage( image ) ));
+        QSharedPointer<TextureTile> const tile( new TextureTile( tileId, new QImage( image ), m_textureLayer ));
         tile->setStackedTileId( stackedTileId );
         tile->setLastModified( QFileInfo( fileName ).lastModified() );
-        tile->setExpireSecs( textureLayer->expire() );
+        tile->setExpireSecs( m_textureLayer->expire() );
 
         if ( !tile->isExpired() ) {
             mDebug() << "TileLoader::loadTile" << tileId.toString() << "StateUptodate";
@@ -65,7 +65,7 @@ QSharedPointer<TextureTile> TileLoader::loadTile( TileId const & stackedTileId,
     // tile was not locally available => trigger download and look for tiles in other levels
     // for scaling
     QImage * replacementTile = scaledLowerLevelTile( tileId );
-    QSharedPointer<TextureTile> const tile( new TextureTile( tileId, replacementTile ));
+    QSharedPointer<TextureTile> const tile( new TextureTile( tileId, replacementTile, m_textureLayer ));
     tile->setStackedTileId( stackedTileId );
 
     triggerDownload( tile, usage );
@@ -86,10 +86,19 @@ void TileLoader::reloadTile( QSharedPointer<TextureTile> const & tile, DownloadU
 
 void TileLoader::downloadTile( TileId const & id )
 {
-    GeoSceneTexture const * const textureLayer = m_textureLayers.value( id.mapThemeIdHash(), 0 );
-    QUrl const url = textureLayer->downloadUrl( id );
-    QString const destFileName = textureLayer->relativeTileFileName( id );
+    QUrl const url = m_textureLayer->downloadUrl( id );
+    QString const destFileName = m_textureLayer->relativeTileFileName( id );
     m_downloadManager->addJob( url, destFileName, id.toString(), DownloadBulk );
+}
+
+QString TileLoader::sourceDir() const
+{
+    return m_textureLayer->sourceDir();
+}
+
+Blending const * TileLoader::blending() const
+{
+    return m_textureLayer->blending();
 }
 
 TileLoader::Job::Job( QSharedPointer< TextureTile > tile, QObject* parent )
@@ -109,24 +118,15 @@ void TileLoader::Job::execute( QByteArray const & data )
     emit tileCompleted( m_tile->stackedTileId(), m_tile->id() );
 }
 
-inline GeoSceneTexture const * TileLoader::findTextureLayer( TileId const & id ) const
-{
-    GeoSceneTexture const * const textureLayer = m_textureLayers.value( id.mapThemeIdHash(), 0 );
-    Q_ASSERT( textureLayer );
-    return textureLayer;
-}
-
 QString TileLoader::tileFileName( TileId const & tileId ) const
 {
-    GeoSceneTexture const * const textureLayer = findTextureLayer( tileId );
-    return MarbleDirs::path( textureLayer->relativeTileFileName( tileId ));
+    return MarbleDirs::path( m_textureLayer->relativeTileFileName( tileId ));
 }
 
 void TileLoader::triggerDownload( QSharedPointer<TextureTile> tile, DownloadUsage const usage )
 {
-    GeoSceneTexture const * const textureLayer = findTextureLayer( tile->id() );
-    QUrl const sourceUrl = textureLayer->downloadUrl( tile->id() );
-    QString const destFileName = textureLayer->relativeTileFileName( tile->id() );
+    QUrl const sourceUrl = m_textureLayer->downloadUrl( tile->id() );
+    QString const destFileName = m_textureLayer->relativeTileFileName( tile->id() );
     Job * job = new Job( tile );
     connect( job, SIGNAL(tileCompleted(TileId,TileId)), this, SIGNAL(tileCompleted(TileId,TileId)));
     m_downloadManager->addJob( sourceUrl, destFileName, job, usage );
@@ -144,7 +144,7 @@ QImage * TileLoader::scaledLowerLevelTile( TileId const & id )
         mDebug() << "TileLoader::scaledLowerLevelTile" << "trying" << replacementTileId.toString();
         QString const fileName = tileFileName( replacementTileId );
         QImage const toScale( fileName );
-        if ( !toScale.isNull() ) {
+        if ( !toScale.isNull() && toScale.size() == m_textureLayer->tileSize()  ) {
             // which rect to scale?
             QSize const size = toScale.size();
             int const restTileX = id.x() % ( 1 << deltaLevel );

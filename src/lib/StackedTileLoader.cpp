@@ -59,10 +59,10 @@ namespace Marble
 class StackedTileLoaderPrivate
 {
 public:
-    StackedTileLoaderPrivate()
-        : m_datasetProvider( 0 ),
+    StackedTileLoaderPrivate( HttpDownloadManager * downloadManager )
+        : m_downloadManager( downloadManager ),
+          m_datasetProvider( 0 ),
           m_mapThemeManager( 0 ),
-          m_tileLoader( 0 ),
           m_textureLayerSettings( 0 )
     {
         m_tileCache.setMaxCost( 20000 * 1024 ); // Cache size measured in bytes
@@ -70,12 +70,12 @@ public:
 
     bool isTextureLayerEnabled( QString const & name ) const;
 
+    HttpDownloadManager * const m_downloadManager;
     DatasetProvider *m_datasetProvider;
     MapThemeManager const *m_mapThemeManager;
     // TODO: comment about uint hash key
     QHash<uint, GeoSceneLayer const *> m_sceneLayers;
-    QHash<uint, GeoSceneTexture const *> m_textureLayers;
-    TileLoader *m_tileLoader;
+    QMap<GeoSceneTexture const *, TileLoader *> m_tileLoaders;
     QHash <TileId, StackedTile*>  m_tilesOnDisplay;
     QCache <TileId, StackedTile>  m_tileCache;
     // we cannot use a const GeoSceneGroup because of QObject connects/disconnects
@@ -95,24 +95,21 @@ StackedTileLoader::StackedTileLoader( MapThemeManager const * const mapThemeMana
                                       GeoSceneGroup * const textureLayerSettings,
                                       HttpDownloadManager * const downloadManager,
                                       MarbleModel * const model )
-    : d( new StackedTileLoaderPrivate ),
+    : d( new StackedTileLoaderPrivate( downloadManager ) ),
       m_parent( model )
 {
     d->m_mapThemeManager = mapThemeManager;
     connect( d->m_mapThemeManager, SIGNAL( themesChanged() ),
              this, SLOT( updateTextureLayers() ) );
     setTextureLayerSettings( textureLayerSettings );
-    d->m_tileLoader = new TileLoader( downloadManager );
     updateTextureLayers();
-    connect( d->m_tileLoader, SIGNAL( tileCompleted( TileId, TileId )),
-             SLOT( updateTile( TileId, TileId )));
 }
 
 StackedTileLoader::~StackedTileLoader()
 {
     flush();
     d->m_tileCache.clear();
-    delete d->m_tileLoader;
+    qDeleteAll( d->m_tileLoaders.values() );
     delete d;
 }
 
@@ -202,19 +199,18 @@ StackedTile* StackedTileLoader::loadTile( TileId const & stackedTileId, Download
     // mDebug() << "load Tile from Disk: " << stackedTileId.toString();
 
     QVector<QSharedPointer<TextureTile> > tiles;
-    QVector<GeoSceneTexture const *> const textureLayers = findRelevantTextureLayers( stackedTileId );
-    QVector<GeoSceneTexture const *>::const_iterator pos = textureLayers.constBegin();
-    QVector<GeoSceneTexture const *>::const_iterator const end = textureLayers.constEnd();
+    QVector<TileLoader *> const textureLayers = findRelevantTextureLayers( stackedTileId );
+    QVector<TileLoader *>::const_iterator pos = textureLayers.constBegin();
+    QVector<TileLoader *>::const_iterator const end = textureLayers.constEnd();
     for (; pos != end; ++pos ) {
-        GeoSceneTexture const * const textureLayer = *pos;
-        TileId const tileId( textureLayer->sourceDir(), stackedTileId.zoomLevel(),
+        TileLoader * tileLoader = *pos;
+        TileId const tileId( tileLoader->sourceDir(), stackedTileId.zoomLevel(),
                              stackedTileId.x(), stackedTileId.y() );
-        mDebug() << "StackedTileLoader::loadTile: tile" << textureLayer->sourceDir()
+        mDebug() << "StackedTileLoader::loadTile: tile" << tileLoader->sourceDir()
                  << tileId.toString();
-        QSharedPointer<TextureTile> const tile = d->m_tileLoader->loadTile( stackedTileId, tileId,
+        QSharedPointer<TextureTile> const tile = tileLoader->loadTile( stackedTileId, tileId,
                                                                             usage );
         if ( tile ) {
-            tile->setBlending( textureLayer->blending() );
             tiles.append( tile );
         }
     }
@@ -256,18 +252,17 @@ StackedTile* StackedTileLoader::reloadTile( TileId const & stackedTileId,
     }
 
     QVector<QSharedPointer<TextureTile> > tiles;
-    QVector<GeoSceneTexture const *> const textureLayers = findRelevantTextureLayers( stackedTileId );
-    QVector<GeoSceneTexture const *>::const_iterator pos = textureLayers.constBegin();
-    QVector<GeoSceneTexture const *>::const_iterator const end = textureLayers.constEnd();
+    QVector<TileLoader *> const tileLoaders = findRelevantTextureLayers( stackedTileId );
+    QVector<TileLoader *>::const_iterator pos = tileLoaders.constBegin();
+    QVector<TileLoader *>::const_iterator const end = tileLoaders.constEnd();
     for (; pos != end; ++pos ) {
-        GeoSceneTexture const * const textureLayer = *pos;
-        TileId const tileId( textureLayer->sourceDir(), stackedTileId.zoomLevel(),
+        TileLoader * const tileLoader = *pos;
+        TileId const tileId( tileLoader->sourceDir(), stackedTileId.zoomLevel(),
                              stackedTileId.x(), stackedTileId.y() );
-        QSharedPointer<TextureTile> const tile = d->m_tileLoader->loadTile( stackedTileId, tileId,
+        QSharedPointer<TextureTile> const tile = tileLoader->loadTile( stackedTileId, tileId,
                                                                               usage );
-        d->m_tileLoader->reloadTile( tile, usage );
+        tileLoader->reloadTile( tile, usage );
         if ( tile ) {
-            tile->setBlending( textureLayer->blending() );
             tiles.append( tile );
         }
     }
@@ -282,14 +277,14 @@ StackedTile* StackedTileLoader::reloadTile( TileId const & stackedTileId,
 
 void StackedTileLoader::downloadTile( TileId const & stackedTileId )
 {
-    QVector<GeoSceneTexture const *> const textureLayers = findRelevantTextureLayers( stackedTileId );
-    QVector<GeoSceneTexture const *>::const_iterator pos = textureLayers.constBegin();
-    QVector<GeoSceneTexture const *>::const_iterator const end = textureLayers.constEnd();
+    QVector<TileLoader *> const tileLoaders = findRelevantTextureLayers( stackedTileId );
+    QVector<TileLoader *>::const_iterator pos = tileLoaders.constBegin();
+    QVector<TileLoader *>::const_iterator const end = tileLoaders.constEnd();
     for (; pos != end; ++pos ) {
-        GeoSceneTexture const * const textureLayer = *pos;
-        TileId const tileId( textureLayer->sourceDir(), stackedTileId.zoomLevel(),
+        TileLoader * const tileLoader = *pos;
+        TileId const tileId( tileLoader->sourceDir(), stackedTileId.zoomLevel(),
                              stackedTileId.x(), stackedTileId.y() );
-        d->m_tileLoader->downloadTile( tileId );
+        tileLoader->downloadTile( tileId );
     }
 }
 
@@ -414,20 +409,13 @@ inline GeoSceneLayer const * StackedTileLoader::findSceneLayer( TileId const & s
     return result;
 }
 
-inline GeoSceneTexture const * StackedTileLoader::findTextureLayer( TileId const & id ) const
-{
-    GeoSceneTexture const * const textureLayer = d->m_textureLayers.value( id.mapThemeIdHash(), 0 );
-    Q_ASSERT( textureLayer );
-    return textureLayer;
-}
-
 // 
-QVector<GeoSceneTexture const *>
+QVector<TileLoader *>
 StackedTileLoader::findRelevantTextureLayers( TileId const & stackedTileId ) const
 {
     GeoSceneLayer const * const sceneLayer = findSceneLayer( stackedTileId );
     QVector<GeoSceneAbstractDataset*> textureLayers = sceneLayer->datasets();
-    QVector<GeoSceneTexture const *> result;
+    QVector<TileLoader *> result;
     QVector<GeoSceneAbstractDataset*>::const_iterator pos = textureLayers.constBegin();
     QVector<GeoSceneAbstractDataset*>::const_iterator const end = textureLayers.constEnd();
     for (; pos != end; ++pos ) {
@@ -442,8 +430,13 @@ StackedTileLoader::findRelevantTextureLayers( TileId const & stackedTileId ) con
              && ( pos == textureLayers.constBegin()
                   || d->isTextureLayerEnabled( candidate->name() ))
              && ( !candidate->hasMaximumTileLevel()
-                  || stackedTileId.zoomLevel() <= candidate->maximumTileLevel() ))
-            result.append( candidate );
+                  || stackedTileId.zoomLevel() <= candidate->maximumTileLevel() )) {
+            qDebug() << (int)candidate;
+            Q_ASSERT( d->m_tileLoaders.contains( candidate ) );
+            TileLoader * const tileLoader = d->m_tileLoaders.value( candidate, 0 );
+            Q_ASSERT( tileLoader );
+            result.append( tileLoader );
+        }
     }
     return result;
 }
@@ -487,20 +480,20 @@ void StackedTileLoader::updateTextureLayers()
                 mDebug() << "ignoring dataset, is not a texture layer";
                 continue;
             }
-            d->m_textureLayers.insert( qHash( textureLayer->sourceDir() ), textureLayer );
+            TileLoader *loader = new TileLoader( textureLayer, d->m_downloadManager );
+            connect( loader, SIGNAL( tileCompleted( TileId, TileId )), SLOT( updateTile( TileId, TileId )));
+            d->m_tileLoaders.insert( textureLayer, loader );
             mDebug() << "StackedTileLoader::updateTextureLayers" << "added texture layer:"
                      << qHash( textureLayer->sourceDir() ) << textureLayer->sourceDir();
         }
     }
-
-    d->m_tileLoader->setTextureLayers( d->m_textureLayers );
 }
 
 void StackedTileLoader::mergeDecorations( StackedTile * const tile ) const
 {
     Q_ASSERT( !tile->resultTile()->isNull() );
     if ( !tile->forMergedLayerDecorator() )
-        m_parent->paintTile( tile, findTextureLayer( tile->id() ) );
+        m_parent->paintTile( tile, tile->tiles()->at(0)->textureLayer()->sourceDir() );
 }
 
 // This method should not alter m_tileCache, as the given tile is managed
@@ -514,7 +507,9 @@ void StackedTileLoader::reloadCachedTile( StackedTile * const cachedTile,
     QVector<QSharedPointer<TextureTile> >::const_iterator pos = tiles->constBegin();
     QVector<QSharedPointer<TextureTile> >::const_iterator const end = tiles->constEnd();
     for (; pos != end; ++pos ) {
-        d->m_tileLoader->reloadTile( *pos, usage );
+        TileLoader *loader = d->m_tileLoaders.value( (*pos)->textureLayer(), 0 );
+        Q_ASSERT( loader );
+        loader->reloadTile( *pos, usage );
     }
     cachedTile->initResultTile();
     mergeDecorations( cachedTile );

@@ -21,11 +21,12 @@
 
 #include "TileId.h"
 
-class QByteArray;
 class QImage;
 
 namespace Marble
 {
+
+class GeoSceneTexture;
 class Blending;
 class TileLoader;
 class StackedTileLoader;
@@ -33,10 +34,9 @@ class StackedTileLoader;
 class TextureTile
 {
     friend class TileLoader;
-    friend class StackedTileLoader;
 
  public:
-    TextureTile( TileId const & tileId, QImage const * image );
+    TextureTile( TileId const & tileId, QImage const * image, GeoSceneTexture const *textureLayer );
     ~TextureTile();
 
     TileId const & id() const;
@@ -46,22 +46,22 @@ class TextureTile
     QImage const * image() const;
     Blending const * blending() const;
     int byteCount() const;
+    GeoSceneTexture const * textureLayer();
 
  private:
     Q_DISABLE_COPY( TextureTile )
 
     void setImage( QImage * const );
-    void setBlending( Blending const * const );
     void setStackedTileId( TileId const & );
     void setLastModified( QDateTime const & );
     void setExpireSecs( int const );
 
     TileId const m_id;
     TileId m_stackedTileId;
-    Blending const * m_blending;
     QDateTime m_lastModified;
     int m_expireSecs;
     QImage const * m_image;
+    GeoSceneTexture const * const m_textureLayer;
 };
 
 
@@ -92,17 +92,17 @@ inline QImage const * TextureTile::image() const
     return m_image;
 }
 
-inline Blending const * TextureTile::blending() const
-{
-    return m_blending;
-}
-
 inline int TextureTile::byteCount() const
 {
     Q_ASSERT( m_image );
 
     // FIXME: once Qt 4.6 is required for Marble, use QImage::byteCount()
     return m_image->numBytes();
+}
+
+inline GeoSceneTexture const* TextureTile::textureLayer()
+{
+    return m_textureLayer;
 }
 
 inline void TextureTile::setImage( QImage * const image )
@@ -113,11 +113,6 @@ inline void TextureTile::setImage( QImage * const image )
     delete m_image;
 
     m_image = image;
-}
-
-inline void TextureTile::setBlending( Blending const * const blending )
-{
-    m_blending = blending;
 }
 
 inline void TextureTile::setStackedTileId( TileId const & id )

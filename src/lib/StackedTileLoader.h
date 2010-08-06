@@ -41,6 +41,7 @@ class MarbleModel;
 class GeoSceneGroup;
 class GeoSceneLayer;
 class GeoSceneTexture;
+class TileLoader;
 
 class StackedTileLoaderPrivate;
 
@@ -162,8 +163,7 @@ class StackedTileLoader : public QObject
     private:
         Q_DISABLE_COPY( StackedTileLoader )
         GeoSceneLayer const * findSceneLayer( TileId const & ) const;
-        GeoSceneTexture const * findTextureLayer( TileId const & ) const;
-        QVector<GeoSceneTexture const *>
+        QVector<TileLoader *>
             findRelevantTextureLayers( TileId const & stackedTileId ) const;
         void mergeDecorations( StackedTile * const ) const;
         void reloadCachedTile( StackedTile * const cachedTile, DownloadUsage const );

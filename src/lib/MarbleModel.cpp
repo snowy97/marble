@@ -910,7 +910,7 @@ void MarbleModel::clearPersistentTileCache()
     }
 }
 
-void MarbleModel::paintTile( StackedTile* tile, const GeoSceneTexture *textureLayer )
+void MarbleModel::paintTile( StackedTile* tile, const QString &sourceDir )
 {
 //    mDebug() << "MarbleModel::paintTile: " << "x: " << x << "y:" << y << "level: " << level
 //             << "requestTileUpdate" << requestTileUpdate;
@@ -918,7 +918,7 @@ void MarbleModel::paintTile( StackedTile* tile, const GeoSceneTexture *textureLa
     d->m_layerDecorator->setInfo( tile->id() );
     d->m_layerDecorator->setTile( tile->resultTile() );
 
-    d->m_layerDecorator->paint( "maps/" + textureLayer->sourceDir(), mapTheme() );
+    d->m_layerDecorator->paint( "maps/" + sourceDir, mapTheme() );
 }
 
 PluginManager* MarbleModel::pluginManager() const
