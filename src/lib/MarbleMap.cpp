@@ -734,6 +734,7 @@ void MarbleMap::paint( GeoPainter &painter, QRect &dirtyRect )
 
     QStringList renderPositions;
 
+#if 0
     if ( d->m_backgroundVisible ) {
         renderPositions << "STARS" << "BEHIND_TARGET";
         d->m_layerManager.renderLayers( &painter, d->m_viewParams.viewport(), renderPositions );
@@ -742,7 +743,7 @@ void MarbleMap::paint( GeoPainter &painter, QRect &dirtyRect )
     if ( d->m_viewParams.showAtmosphere() ) {
         d->m_atmosphereLayer.render( &painter, d->m_viewParams.viewport() );
     }
-
+#endif
     if ( d->m_model->mapTheme()->map()->hasTextureLayers() ) {
         d->m_textureLayer.paintGlobe( &painter, &d->m_viewParams, dirtyRect );
     }
