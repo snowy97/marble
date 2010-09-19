@@ -55,6 +55,9 @@ class MarbleMapTest : public QObject
     void centerOnMercatorMaxLat_data();
     void centerOnMercatorMaxLat();
 
+    void centerOnMercatorHeading_data();
+    void centerOnMercatorHeading();
+
     void rotateBySpherical_data();
     void rotateBySpherical();
 
@@ -254,6 +257,43 @@ void MarbleMapTest::centerOnMercatorMaxLat()
 
     QFUZZYCOMPARE( map.centerLongitude(), lon, 0.0001 );
     QFUZZYCOMPARE( map.centerLatitude(), 85.0511, 0.0001 ); // clip to maxLat
+}
+
+void MarbleMapTest::centerOnMercatorHeading_data()
+{
+    QTest::addColumn<qreal>( "lon" );
+    QTest::addColumn<qreal>( "lat" );
+    QTest::addColumn<qreal>( "heading" );
+
+    addRow() << -180.0 << 0.0 << 90.0;
+    addRow() <<  -90.0 << 0.0 << 90.0;
+    addRow() <<    0.0 << 0.0 << 90.0;
+    addRow() <<   90.0 << 0.0 << 90.0;
+    addRow() <<  180.0 << 0.0 << 90.0;
+
+    addRow() << -180.0 << 85.0 << 90.0;
+    addRow() <<  -90.0 << 85.0 << 90.0;
+    addRow() <<    0.0 << 85.0 << 90.0;
+    addRow() <<   90.0 << 85.0 << 90.0;
+    addRow() <<  180.0 << 85.0 << 90.0;
+}
+
+void MarbleMapTest::centerOnMercatorHeading()
+{
+    ViewportParams viewport;
+
+    viewport.setProjection( Mercator );
+
+    QFETCH( qreal, lon );
+    QFETCH( qreal, lat );
+    QFETCH( qreal, heading );
+
+    viewport.centerOn( lon * DEG2RAD, lat * DEG2RAD );
+    viewport.setHeading( heading * DEG2RAD );
+
+    QFUZZYCOMPARE( viewport.centerLongitude() * RAD2DEG, lon, 0.0001 );
+    QFUZZYCOMPARE( viewport.centerLatitude() * RAD2DEG, lat, 0.0001 );
+    QFUZZYCOMPARE( viewport.heading() * RAD2DEG, heading, 0.0001 );
 }
 
 void MarbleMapTest::rotateBySpherical_data()

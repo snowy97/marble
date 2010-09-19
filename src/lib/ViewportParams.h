@@ -84,6 +84,7 @@ class MARBLE_EXPORT ViewportParams
     bool  globeCoversViewport() const;
 
     void centerOn( qreal lon, qreal lat );
+    void setHeading( qreal heading );
 
     Quaternion planetAxis() const;
     const matrix * planetAxisMatrix() const;
@@ -99,6 +100,8 @@ class MARBLE_EXPORT ViewportParams
     qreal centerLongitude() const;
     qreal centerLatitude() const;
     MARBLE_DEPRECATED( void centerCoordinates( qreal &centerLon, qreal &centerLat ) const );
+
+    qreal heading() const;
 
     bool  mapCoversViewport() const;
 

@@ -124,6 +124,9 @@ void TileScalingTextureMapper::mapTexture( GeoPainter *painter, const ViewportPa
         m_cache->clear();
 
         QPainter imagePainter( &m_canvasImage );
+        imagePainter.translate( viewport->width()/2, viewport->height()/2 );
+        imagePainter.rotate( viewport->heading() * RAD2DEG );
+        imagePainter.translate( -viewport->width()/2, -viewport->height()/2 );
         imagePainter.setRenderHint( QPainter::SmoothPixmapTransform, highQuality );
 
         for ( int tileY = minTileY; tileY <= maxTileY; ++tileY ) {
@@ -156,6 +159,9 @@ void TileScalingTextureMapper::mapTexture( GeoPainter *painter, const ViewportPa
         }
     } else {
         painter->save();
+        painter->translate( viewport->width()/2, viewport->height()/2 );
+        painter->rotate( viewport->heading() * RAD2DEG );
+        painter->translate( -viewport->width()/2, -viewport->height()/2 );
         painter->setRenderHint( QPainter::SmoothPixmapTransform, highQuality );
 
         for ( int tileY = minTileY; tileY <= maxTileY; ++tileY ) {
