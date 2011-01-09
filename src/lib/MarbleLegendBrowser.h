@@ -63,7 +63,7 @@ class MARBLE_EXPORT MarbleLegendBrowser : public QTextBrowser
  private Q_SLOTS:
     void initTheme();
 
-    void loadLegend();
+    void loadLegend( const QUrl& url );
 
     void toggleCheckBoxStatus( const QUrl &);
 

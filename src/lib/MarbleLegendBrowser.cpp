@@ -48,8 +48,6 @@ class MarbleLegendBrowserPrivate
     MarbleWidget        *m_marbleWidget;
     QMap<QString, bool>     m_checkBoxMap;
     QMap<QString, QPixmap>  m_symbolMap;
-    QString              m_html;
-    QString              m_loadedSectionsHtml;
 };
 
 
@@ -118,21 +116,11 @@ void MarbleLegendBrowser::initTheme()
                   this, SLOT( setCheckedProperty( QString, bool ) ) );
     }
 
-    loadLegend();
-}
-
-void MarbleLegendBrowser::loadLegend()
-{
-    mDebug() << "loadLegend";
-    QTime t;
-    t.start();
-
-    // Read the html string.
-
+    QUrl url;
     // Check for a theme specific legend.html first
     if ( d->m_marbleWidget != 0
-	 && d->m_marbleWidget->model() != 0
-	 && d->m_marbleWidget->model()->mapTheme() != 0 )
+         && d->m_marbleWidget->model() != 0
+         && d->m_marbleWidget->model()->mapTheme() != 0 )
     {
         GeoSceneDocument *currentMapTheme = d->m_marbleWidget->model()->mapTheme();
 
@@ -140,21 +128,30 @@ void MarbleLegendBrowser::loadLegend()
         currentMapTheme->head()->target() + '/' + 
         currentMapTheme->head()->theme() + "/legend.html" ); 
         if ( !customLegendPath.isEmpty() )
-            d->m_html = readHtml( QUrl::fromLocalFile( customLegendPath  ) );
-        else
-            d->m_html.clear();
+            url = QUrl::fromLocalFile( customLegendPath  );
     }
 
-    if ( d->m_html.isEmpty() ) {
-        d->m_html = readHtml( QUrl::fromLocalFile( MarbleDirs::path( "legend.html" ) ) );
+    if ( url.isEmpty() ) {
+        url = QUrl::fromLocalFile( MarbleDirs::path( "legend.html" ) );
     }
+
+    loadLegend( url );
+}
+
+void MarbleLegendBrowser::loadLegend( const QUrl& url )
+{
+    mDebug() << "loadLegend";
+    QTime t;
+    t.start();
+
+    // Read the html string.
+    QString finalHtml = readHtml( url );
 
     // Generate some parts of the html from the MapTheme <Legend> tag. 
-    d->m_loadedSectionsHtml = generateSectionsHtml();
+    const QString loadedSectionsHtml = generateSectionsHtml();
 
     // And then create the final html from these two parts.
-    QString  finalHtml = d->m_html;
-    finalHtml.replace( QString( "<!-- ##customLegendEntries:all## -->" ), d->m_loadedSectionsHtml );
+    finalHtml.replace( QString( "<!-- ##customLegendEntries:all## -->" ), loadedSectionsHtml );
 
     translateHtml( finalHtml );
 
