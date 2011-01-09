@@ -50,7 +50,6 @@ class MarbleLegendBrowserPrivate
     QMap<QString, QPixmap>  m_symbolMap;
     QString              m_html;
     QString              m_loadedSectionsHtml;
-    bool                 m_isLegendLoaded;
 };
 
 
@@ -61,7 +60,6 @@ MarbleLegendBrowser::MarbleLegendBrowser( QWidget *parent )
     : QTextBrowser( parent ),
       d( new MarbleLegendBrowserPrivate )
 {
-    d->m_isLegendLoaded = false;
     d->m_marbleWidget = 0;
     // Disable changing layout due to the ScrollBarPolicy:
     setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOn );
@@ -120,12 +118,7 @@ void MarbleLegendBrowser::initTheme()
                   this, SLOT( setCheckedProperty( QString, bool ) ) );
     }
 
-    if ( isVisible() ) {
-        loadLegend();
-    }
-    else {
-        d->m_isLegendLoaded = false;
-    }
+    loadLegend();
 }
 
 void MarbleLegendBrowser::loadLegend()
@@ -173,24 +166,11 @@ void MarbleLegendBrowser::loadLegend()
     document()->rootFrame()->setFrameFormat( format );
     viewport()->update();
 
-    d->m_isLegendLoaded = true;
     qDebug("loadLegend: Time elapsed: %d ms", t.elapsed());
 
     if ( d->m_marbleWidget ) {
         d->m_marbleWidget->model()->setLegend( document() );
     }
-}
-
-bool MarbleLegendBrowser::event( QEvent * event )
-{
-    // "Delayed initialization": legend gets created only 
-    if ( event->type() == QEvent::Show ) {
-        if ( !d->m_isLegendLoaded ) {
-            loadLegend();
-            return true;
-        }
-    }
-    return QTextBrowser::event( event );
 }
 
 QString MarbleLegendBrowser::readHtml( const QUrl & name )
@@ -366,16 +346,6 @@ void MarbleLegendBrowser::toggleCheckBoxStatus( const QUrl &link )
         }
     }
 
-    setUpdatesEnabled( false );
-    {
-        int scrollPosition = verticalScrollBar()->sliderPosition();
-
-        loadLegend();
-
-        verticalScrollBar()->setSliderPosition( scrollPosition );
-    }
-    setUpdatesEnabled( true );
-
     update();
 }
 
@@ -386,15 +356,6 @@ void MarbleLegendBrowser::setCheckedProperty( const QString& name, bool checked 
         return;
     
     d->m_checkBoxMap[ name ] = checked;
-
-    setUpdatesEnabled( false );
-    {
-        int scrollPosition = verticalScrollBar()->sliderPosition();
-        loadLegend();
-
-        verticalScrollBar()->setSliderPosition( scrollPosition );
-    }
-    setUpdatesEnabled( true );
 
     update();
 }
