@@ -22,6 +22,11 @@
 #include "marble_export.h"
 
 class QEvent;
+class QKeyEvent;
+class QMouseEvent;
+class QTouchEvent;
+class QWheelEvent;
+class QPoint;
 class QRubberBand;
 class QTimer;
 
@@ -88,10 +93,23 @@ class MARBLE_EXPORT MarbleWidgetDefaultInputHandler  : public MarbleWidgetInputH
     MarbleWidgetDefaultInputHandler( MarbleWidget* );
     ~MarbleWidgetDefaultInputHandler();
 
-    static bool keyEvent( MarbleWidget * widget, QEvent* e );
+    virtual bool eventFilter( QObject *, QEvent * );
 
  protected:
-    bool eventFilter( QObject *, QEvent * );
+    void mouseDoubleClickEvent( QMouseEvent * );
+    void mousePressEvent( QMouseEvent * );
+    void mouseReleaseEvent( QMouseEvent * );
+    bool mouseMoveEvent( QMouseEvent * );
+
+#ifndef QT_NO_WHEELEVENT
+    void wheelEvent( QWheelEvent * );
+#endif
+
+#if QT_VERSION >= 0x40600
+    void touchEvent( QTouchEvent * );
+#endif
+
+    bool keyEvent( QKeyEvent * );
 
  private Q_SLOTS:
     void showLmbMenu( int, int );
@@ -105,6 +123,8 @@ class MARBLE_EXPORT MarbleWidgetDefaultInputHandler  : public MarbleWidgetInputH
     void addMeasurePoint();
 
     void setNumberOfMeasurePoints( int number );
+
+    void updateMouseCursor( const QMouseEvent * );
 
  private:
     Q_DISABLE_COPY( MarbleWidgetDefaultInputHandler )

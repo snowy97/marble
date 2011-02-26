@@ -152,12 +152,8 @@ class MarbleWidgetDefaultInputHandler::Private
 
     QCursor m_arrowCur[3][3];
 
-    // Indicates if the left mouse button has been pressed already.
-    bool m_leftPressed;
     // Indicates whether the drag was started by a click above or below the visible pole.
     int m_leftPressedDirection;
-    // Indicates if the middle mouse button has been pressed already.
-    bool m_midPressed;
     // The mouse pointer x position when the left mouse button has been pressed.
     int m_leftPressedX;
     // The mouse pointer y position when the left mouse button has been pressed.
@@ -188,9 +184,7 @@ class MarbleWidgetDefaultInputHandler::Private
 };
 
 MarbleWidgetDefaultInputHandler::Private::Private()
-    : m_leftPressed( false ),
-      m_midPressed( false ),
-      m_dragThreshold( 3 ),
+    : m_dragThreshold( 3 ),
       m_popupmenu( 0 )
 {
     m_curpmtl.load( MarbleDirs::path("bitmaps/cursor_tl.xpm") );
@@ -390,327 +384,372 @@ void MarbleWidgetDefaultInputHandler::openItemToolTip()
 
 bool MarbleWidgetDefaultInputHandler::eventFilter( QObject* o, QEvent* e )
 {
-    Q_UNUSED( o );
-
-    if (d->m_selectionRubber->isVisible() && e->type() == QEvent::MouseMove)
-    {
-        QMouseEvent *event = static_cast<QMouseEvent*>( e );
-        if (!(event->modifiers() & Qt::ControlModifier))
-        {
-            d->m_selectionRubber->hide();
-        }
+    if ( e->type() == QEvent::MouseMove ) {
+        mouseMoveEvent( static_cast<QMouseEvent*>( e ) );
+        // Mouse move events need to be eaten to avoid the default oxygen behavior of
+        // moving the window around when we don't handle the event. See bug 242414.
+        return false;
     }
 
-    if (e->type() == QEvent::MouseButtonDblClick)
-    {
-        d->m_lmbTimer.stop();
-        QMouseEvent *event = static_cast<QMouseEvent*>( e );
-        d->MoveTo(MarbleWidgetInputHandler::d->m_widget, event->pos(), 0.67);
-        MarbleWidgetInputHandler::d->m_mouseWheelTimer->start( 400 );
-    }
-
-    if ( keyEvent( MarbleWidgetInputHandler::d->m_widget, e ) ) {
+    if ( e->type() == QEvent::MouseButtonPress ) {
+        mousePressEvent( static_cast<QMouseEvent*>( e ) );
         return true;
     }
 
-    int polarity = MarbleWidgetInputHandler::d->m_widget->viewport()->polarity();
+    if ( e->type() == QEvent::MouseButtonRelease ) {
+        mouseReleaseEvent( static_cast<QMouseEvent*>( e ) );
+        return true;
+    }
 
-    if ( e->type() == QEvent::MouseMove
-         || e->type() == QEvent::MouseButtonPress
-         || e->type() == QEvent::MouseButtonRelease )
+    if ( e->type() == QEvent::MouseButtonDblClick ) {
+        mouseDoubleClickEvent( static_cast<QMouseEvent*>( e ) );
+        return true;
+    }
+
+    if ( keyEvent( static_cast<QKeyEvent*>( e ) ) ) {
+        return true;
+    }
+
+#ifndef QT_NO_WHEELEVENT
+    if ( e->type() == QEvent::Wheel ) {
+        wheelEvent( static_cast<QWheelEvent*>( e ) );
+        return true;
+    }
+#endif
+
+#if QT_VERSION >= 0x40600
+    if ( e->type() == QEvent::TouchBegin ||
+         e->type() == QEvent::TouchUpdate ||
+         e->type() == QEvent::TouchEnd ) {
+        touchEvent( static_cast<QTouchEvent *>( e ) );
+        return true;
+    }
+#endif
+
+    // let others, especially float items, still process the event
+    return QObject::eventFilter( o, e );
+}
+
+void MarbleWidgetDefaultInputHandler::updateMouseCursor( const QMouseEvent *e )
+{
+    const bool leftPressed = ( e->buttons() & Qt::LeftButton );
+
+    int dirX = 0;
+    int dirY = 0;
+
+    QRegion activeRegion = MarbleWidgetInputHandler::d->m_widget->activeRegion();
+    if ( !activeRegion.contains( e->pos() ) && !d->m_selectionRubber->isVisible() ) {
+        QRect boundingRect = MarbleWidgetInputHandler::d->m_widget->mapRegion().boundingRect();
+
+        if ( boundingRect.width() != 0 ) {
+            dirX = (int)( 3 * ( e->x() - boundingRect.left() ) / boundingRect.width() ) - 1;
+        }
+
+        if ( dirX > 1 )
+            dirX = 1;
+        if ( dirX < -1 )
+            dirX = -1;
+
+        if ( boundingRect.height() != 0 ) {
+            dirY = (int)( 3 * ( e->y() - boundingRect.top() ) / boundingRect.height() ) - 1;
+        }
+
+        if ( dirY > 1 )
+            dirY = 1;
+        if ( dirY < -1 )
+            dirY = -1;
+    }
+
+    // Adjusting Cursor shape
+
+    // Find out if there are data items and if one has defined an action
+    QList<AbstractDataPluginItem *> dataItems
+        = MarbleWidgetInputHandler::d->m_widget->whichItemAt( e->pos() );
+    bool dataAction = false;
+    QPointer<AbstractDataPluginItem> toolTipItem;
+    QList<AbstractDataPluginItem *>::iterator it = dataItems.begin();
+    QList<AbstractDataPluginItem *>::iterator const end = dataItems.end();
+    for (; it != end && dataAction == false && toolTipItem.isNull(); ++it ) {
+        if ( (*it)->action() ) {
+            dataAction = true;
+        }
+
+        if ( !(*it)->toolTip().isNull() && toolTipItem.isNull() ) {
+            toolTipItem = (*it);
+        }
+    }
+
+    if ( toolTipItem.isNull() ) {
+        d->m_toolTipTimer.stop();
+    }
+    else if ( !( d->m_lastToolTipItem.data() == toolTipItem.data() ) ) {
+        d->m_toolTipTimer.start();
+        d->m_lastToolTipItem = toolTipItem;
+        d->m_toolTipPosition = e->pos();
+    }
+    else {
+        if ( !d->m_toolTipTimer.isActive() ) {
+            d->m_toolTipTimer.start();
+        }
+
+        d->m_toolTipPosition = e->pos();
+    }
+
+    if ( ( MarbleWidgetInputHandler::d->m_widget->whichFeatureAt( e->pos() ).size() == 0 )
+            && ( !dataAction ) )
     {
-        QMouseEvent *event = static_cast<QMouseEvent*>( e );
-        QRegion activeRegion = MarbleWidgetInputHandler::d->m_widget->activeRegion();
+        if ( !leftPressed )
+            d->m_arrowCur [1][1] = QCursor( Qt::OpenHandCursor );
+        else
+            d->m_arrowCur [1][1] = QCursor( Qt::ClosedHandCursor );
+    }
+    else {
+        if ( !leftPressed )
+            d->m_arrowCur [1][1] = QCursor( Qt::PointingHandCursor );
+    }
+
+    MarbleWidgetInputHandler::d->m_widget->setCursor( d->m_arrowCur[dirX+1][dirY+1] );
+}
+
+bool MarbleWidgetDefaultInputHandler::mouseMoveEvent( QMouseEvent *e )
+{
+    const bool leftPressed = ( e->buttons() & Qt::LeftButton );
+    const bool midPressed  = ( e->buttons() & Qt::MidButton  );
+
+    if ( d->m_selectionRubber->isVisible() )
+    {
+        if ( !( e->modifiers() & Qt::ControlModifier ) )
+        {
+            d->m_selectionRubber->hide();
+        }
+        else
+        {
+            // We change selection.
+            d->m_selectionRubber->setGeometry( QRect( d->m_selectionOrigin,
+                                                        e->globalPos() ).normalized() );
+        }
+    }
+
+    QRegion activeRegion = MarbleWidgetInputHandler::d->m_widget->activeRegion();
+    if ( activeRegion.contains( e->pos() ) || d->m_selectionRubber->isVisible() ) {
+        // Regarding all kinds of mouse moves:
+        if ( leftPressed && !d->m_selectionRubber->isVisible() ) {
+            qreal radius = ( qreal )( MarbleWidgetInputHandler::d->m_widget->radius() );
+            int deltax = e->x() - d->m_leftPressedX;
+            int deltay = e->y() - d->m_leftPressedY;
+
+            if ( abs( deltax ) > d->m_dragThreshold
+                    || abs( deltay ) > d->m_dragThreshold ) {
+
+                d->m_lmbTimer.stop();
+                MarbleWidgetInputHandler::d->m_widget->centerOn( RAD2DEG * ( qreal )( d->m_leftPressedLon )
+                                                                    - 90.0 * d->m_leftPressedDirection * deltax / radius,
+                                                                    RAD2DEG * ( qreal )( d->m_leftPressedLat )
+                                                                    + 90.0 * deltay / radius );
+            }
+        }
+
+        if ( midPressed ) {
+            int eventy = e->y();
+            int dy = d->m_midPressedY - eventy;
+            MarbleWidgetInputHandler::d->m_widget->setRadius( d->m_radiusWhenPressed * pow( 1.005, dy ) );
+        }
+    }
+
+    // Do not handle (and therefore eat) mouse press and release events
+    // that occur above visible float items. Mouse motion events are still
+    // handled, however.
+    if ( !d->m_selectionRubber->isVisible() )
+    {
+        foreach ( AbstractFloatItem *floatItem, MarbleWidgetInputHandler::d->m_widget->floatItems() ) {
+            if ( floatItem->enabled() && floatItem->visible()
+                    && floatItem->contains( e->pos() ) )
+            {
+                d->m_lmbTimer.stop();
+                return false;
+            }
+        }
+    }
+
+    // emit the position string only if the signal got attached
+    if ( MarbleWidgetInputHandler::d->m_positionSignalConnected ) {
+        qreal lat;
+        qreal lon;
+        bool isValid = MarbleWidgetInputHandler::d->m_widget->geoCoordinates( e->x(), e->y(),
+                                                    lon, lat,
+                                                    GeoDataCoordinates::Radian );
+
+        if ( !isValid ) {
+            emit mouseMoveGeoPosition( tr( NOT_AVAILABLE ) );
+        }
+        else {
+            QString position = GeoDataCoordinates( lon, lat ).toString();
+            emit mouseMoveGeoPosition( position );
+        }
+    }
+
+    updateMouseCursor( e );
+
+    return true;
+}
+
+void MarbleWidgetDefaultInputHandler::mouseDoubleClickEvent( QMouseEvent *e )
+{
+    d->m_lmbTimer.stop();
+    d->MoveTo(MarbleWidgetInputHandler::d->m_widget, e->pos(), 0.67);
+    MarbleWidgetInputHandler::d->m_mouseWheelTimer->start( 400 );
+
+    updateMouseCursor( e );
+}
+
+void MarbleWidgetDefaultInputHandler::mousePressEvent( QMouseEvent *event )
+{
+    QRegion activeRegion = MarbleWidgetInputHandler::d->m_widget->activeRegion();
+    if ( activeRegion.contains( event->pos() ) || d->m_selectionRubber->isVisible() ) {
+        // Regarding mouse button presses:
+        if ( event->button() == Qt::LeftButton ) {
+
+            if (isMouseButtonPopupEnabled(Qt::LeftButton))
+                d->m_lmbTimer.start(400);
+
+            d->m_selectionRubber->hide();
+
+            // On the single event of a mouse button press these
+            // values get stored, to enable us to e.g. calculate the
+            // distance of a mouse drag while the mouse button is
+            // still down.
+            d->m_leftPressedX = event->x();
+            d->m_leftPressedY = event->y();
+
+            // Calculate translation of center point
+            d->m_leftPressedLon = MarbleWidgetInputHandler::d->m_widget->centerLongitude() * DEG2RAD;
+            d->m_leftPressedLat = MarbleWidgetInputHandler::d->m_widget->centerLatitude() * DEG2RAD;
+
+            d->m_leftPressedDirection = 1;
+
+            // Choose spin direction by taking into account whether we
+            // drag above or below the visible pole.
+            if ( MarbleWidgetInputHandler::d->m_widget->projection() == Spherical ) {
+                if ( d->m_leftPressedLat >= 0 ) {
+                    // The visible pole is the north pole
+                    qreal northPoleX, northPoleY;
+                    MarbleWidgetInputHandler::d->m_widget->screenCoordinates( 0.0, 90.0, northPoleX, northPoleY );
+                    if ( event->y() < northPoleY )
+                        d->m_leftPressedDirection = -1;
+                }
+                else {
+                    // The visible pole is the south pole
+                    qreal southPoleX, southPoleY;
+                    MarbleWidgetInputHandler::d->m_widget->screenCoordinates( 0.0, -90.0, southPoleX, southPoleY );
+                    if ( event->y() > southPoleY )
+                        d->m_leftPressedDirection = -1;
+                }
+            }
+
+            MarbleWidgetInputHandler::d->m_widget->setViewContext( Animation );
+        }
+
+        if ( event->button() == Qt::MidButton ) {
+            d->m_radiusWhenPressed = MarbleWidgetInputHandler::d->m_widget->radius();
+            d->m_midPressedY = event->y();
+
+            d->m_selectionRubber->hide();
+            MarbleWidgetInputHandler::d->m_widget->setViewContext( Animation );
+        }
+
+        if ( event->button() == Qt::RightButton ) {
+            emit rmbRequest( event->x(), event->y() );
+        }
+
+        if ( event->button() == Qt::LeftButton
+                && ( event->modifiers() & Qt::ControlModifier ) )
+        {
+            qDebug("Marble: Starting selection");
+            d->m_lmbTimer.stop();                
+            d->m_selectionOrigin = event->globalPos();
+            d->m_selectionRubber->setGeometry( QRect( d->m_selectionOrigin, QSize() ));
+            d->m_selectionRubber->show();
+        }
+    }
+
+    if ( event->button() == Qt::LeftButton ) {
+
+        const QRect boundingRect = MarbleWidgetInputHandler::d->m_widget->mapRegion().boundingRect();
+        const int polarity = MarbleWidgetInputHandler::d->m_widget->viewport()->polarity();
 
         int dirX = 0;
         int dirY = 0;
 
-        // To prevent error from lost MouseButtonRelease events
-        if ( event->type() == QEvent::MouseMove
-             && !( event->buttons() & Qt::LeftButton ) )
-        {
-            d->m_leftPressed = false;
-        }
-        if ( event->type() == QEvent::MouseMove
-             && !( event->buttons() & Qt::MidButton ) )
-        {
-            d->m_midPressed = false;
+        if ( boundingRect.width() != 0 ) {
+            dirX = (int)( 3 * ( event->x() - boundingRect.left() ) / boundingRect.width() ) - 1;
         }
 
-        // Do not handle (and therefore eat) mouse press and release events
-        // that occur above visible float items. Mouse motion events are still
-        // handled, however.
-        if ( e->type() != QEvent::MouseMove
-             && !d->m_selectionRubber->isVisible() )
-        {
-            foreach ( AbstractFloatItem *floatItem, MarbleWidgetInputHandler::d->m_widget->floatItems() ) {
-                if ( floatItem->enabled() && floatItem->visible()
-                     && floatItem->contains( event->pos() ) )
-                {
-                    d->m_lmbTimer.stop();
-                    return false;
-                }
-            }
+        if ( dirX > 1 )
+            dirX = 1;
+        if ( dirX < -1 )
+            dirX = -1;
+
+        if ( boundingRect.height() != 0 ) {
+            dirY = (int)( 3 * ( event->y() - boundingRect.top() ) / boundingRect.height() ) - 1;
         }
 
-        // emit the position string only if the signal got attached
-        if ( MarbleWidgetInputHandler::d->m_positionSignalConnected ) {
-            qreal lat;
-            qreal lon;
-            bool isValid = MarbleWidgetInputHandler::d->m_widget->geoCoordinates( event->x(), event->y(),
-                                                     lon, lat,
-                                                     GeoDataCoordinates::Radian );
+        if ( dirY > 1 )
+            dirY = 1;
+        if ( dirY < -1 )
+            dirY = -1;
 
-            if ( !isValid ) {
-                emit mouseMoveGeoPosition( tr( NOT_AVAILABLE ) );
-            }
-            else {
-                QString position = GeoDataCoordinates( lon, lat ).toString();
-                emit mouseMoveGeoPosition( position );
-            }
-        }
-
-
-        if ( activeRegion.contains( event->pos() ) || d->m_selectionRubber->isVisible() ) {
-
-            // Regarding mouse button presses:
-            if ( e->type() == QEvent::MouseButtonPress
-                 && event->button() == Qt::LeftButton ) {
-
-                if (isMouseButtonPopupEnabled(Qt::LeftButton))
-                    d->m_lmbTimer.start(400);
-
-                d->m_leftPressed = true;
-                d->m_midPressed = false;
-                d->m_selectionRubber->hide();
-
-                // On the single event of a mouse button press these
-                // values get stored, to enable us to e.g. calculate the
-                // distance of a mouse drag while the mouse button is
-                // still down.
-                d->m_leftPressedX = event->x();
-                d->m_leftPressedY = event->y();
-
-                // Calculate translation of center point
-                d->m_leftPressedLon = MarbleWidgetInputHandler::d->m_widget->centerLongitude() * DEG2RAD;
-                d->m_leftPressedLat = MarbleWidgetInputHandler::d->m_widget->centerLatitude() * DEG2RAD;
-
-                d->m_leftPressedDirection = 1;
-
-                // Choose spin direction by taking into account whether we
-                // drag above or below the visible pole.
-                if ( MarbleWidgetInputHandler::d->m_widget->projection() == Spherical ) {
-                    if ( d->m_leftPressedLat >= 0 ) {
-                        // The visible pole is the north pole
-                        qreal northPoleX, northPoleY;
-                        MarbleWidgetInputHandler::d->m_widget->screenCoordinates( 0.0, 90.0, northPoleX, northPoleY );
-                        if ( event->y() < northPoleY )
-                            d->m_leftPressedDirection = -1;
-                    }
-                    else {
-                        // The visible pole is the south pole
-                        qreal southPoleX, southPoleY;
-                        MarbleWidgetInputHandler::d->m_widget->screenCoordinates( 0.0, -90.0, southPoleX, southPoleY );
-                        if ( event->y() > southPoleY )
-                            d->m_leftPressedDirection = -1;
-                    }
-                }
-
-                MarbleWidgetInputHandler::d->m_widget->setViewContext( Animation );
-            }
-
-            if ( e->type() == QEvent::MouseButtonPress
-                 && event->button() == Qt::MidButton ) {
-                d->m_midPressed = true;
-                d->m_leftPressed = false;
-                d->m_radiusWhenPressed = MarbleWidgetInputHandler::d->m_widget->radius();
-                d->m_midPressedY = event->y();
-
-                d->m_selectionRubber->hide();
-                MarbleWidgetInputHandler::d->m_widget->setViewContext( Animation );
-            }
-
-            if ( e->type() == QEvent::MouseButtonPress
-                 && event->button() == Qt::RightButton ) {
-                emit rmbRequest( event->x(), event->y() );
-            }
-
-            if ( e->type() == QEvent::MouseButtonPress
-                 && event->button() == Qt::LeftButton
-                 && ( event->modifiers() & Qt::ControlModifier ) )
-            {
-                qDebug("Marble: Starting selection");
-                d->m_lmbTimer.stop();                
-                d->m_selectionOrigin = event->globalPos();
-                d->m_selectionRubber->setGeometry( QRect( d->m_selectionOrigin, QSize() ));
-                d->m_selectionRubber->show();
-            }
-
-            // Regarding mouse button releases:
-            if ( e->type() == QEvent::MouseButtonRelease
-                 && event->button() == Qt::LeftButton )
-            {
-
-                //emit current coordinates to be be interpreted
-                //as requested
-                emit mouseClickScreenPosition( d->m_leftPressedX, d->m_leftPressedY );
-
-                MarbleWidgetInputHandler::d->m_widget->setViewContext( Still );
-
-                d->m_leftPressed = false;
-            }
-
-            if ( e->type() == QEvent::MouseButtonRelease
-                 && event->button() == Qt::MidButton ) {
-                d->m_midPressed = false;
-
-                MarbleWidgetInputHandler::d->m_widget->setViewContext( Still );
-            }
-
-            if ( e->type() == QEvent::MouseButtonRelease
-                 && event->button() == Qt::RightButton) {
-            }
-
-            if ( e->type() == QEvent::MouseButtonRelease
-                && event->button() == Qt::LeftButton 
-                 && d->m_selectionRubber->isVisible() ) 
-            {
-                qDebug("Marble: Leaving selection");
-                QRect r( MarbleWidgetInputHandler::d->m_widget->mapFromGlobal( d->m_selectionRubber->geometry().topLeft() ),
-                         MarbleWidgetInputHandler::d->m_widget->mapFromGlobal( d->m_selectionRubber->geometry().bottomRight() ));
-                MarbleWidgetInputHandler::d->m_widget->setSelection( r );
-                d->m_selectionRubber->hide();
-            }
-
-            // Regarding all kinds of mouse moves:
-            if ( d->m_leftPressed && !d->m_selectionRubber->isVisible() ) {
-                qreal radius = ( qreal )( MarbleWidgetInputHandler::d->m_widget->radius() );
-                int deltax = event->x() - d->m_leftPressedX;
-                int deltay = event->y() - d->m_leftPressedY;
-
-                if ( abs( deltax ) > d->m_dragThreshold
-                     || abs( deltay ) > d->m_dragThreshold ) {
-
-                    d->m_lmbTimer.stop();
-                    MarbleWidgetInputHandler::d->m_widget->centerOn( RAD2DEG * ( qreal )( d->m_leftPressedLon )
-                                                                     - 90.0 * d->m_leftPressedDirection * deltax / radius,
-                                                                     RAD2DEG * ( qreal )( d->m_leftPressedLat )
-                                                                     + 90.0 * deltay / radius );
-                }
-            }
-
-
-            if ( d->m_midPressed ) {
-                int eventy = event->y();
-                int dy = d->m_midPressedY - eventy;
-                MarbleWidgetInputHandler::d->m_widget->setRadius( d->m_radiusWhenPressed * pow( 1.005, dy ) );
-            }
-
-            if ( d->m_selectionRubber->isVisible() ) 
-            {
-                // We change selection.
-                d->m_selectionRubber->setGeometry( QRect( d->m_selectionOrigin,
-                                                          event->globalPos() ).normalized() );
-            }
-        }
-        else {
-            d->m_leftPressed = false;
-
-            QRect boundingRect = MarbleWidgetInputHandler::d->m_widget->mapRegion().boundingRect();
-
-            if ( boundingRect.width() != 0 ) {
-                dirX = (int)( 3 * ( event->x() - boundingRect.left() ) / boundingRect.width() ) - 1;
-            }
-
-            if ( dirX > 1 )
-                dirX = 1;
-            if ( dirX < -1 )
-                dirX = -1;
-
-            if ( boundingRect.height() != 0 ) {
-                dirY = (int)( 3 * ( event->y() - boundingRect.top() ) / boundingRect.height() ) - 1;
-            }
-
-            if ( dirY > 1 )
-                dirY = 1;
-            if ( dirY < -1 )
-                dirY = -1;
-
-            if ( event->button() == Qt::LeftButton
-                 && e->type() == QEvent::MouseButtonPress ) {
-
-                d->m_lmbTimer.stop();                
-                if ( polarity < 0 )
-                    MarbleWidgetInputHandler::d->m_widget->rotateBy( -MarbleWidgetInputHandler::d->m_widget->moveStep() * (qreal)(+dirX),
-                                                                     MarbleWidgetInputHandler::d->m_widget->moveStep() * (qreal)(+dirY) );
-                else
-                    MarbleWidgetInputHandler::d->m_widget->rotateBy( -MarbleWidgetInputHandler::d->m_widget->moveStep() * (qreal)(-dirX),
-                                                                     MarbleWidgetInputHandler::d->m_widget->moveStep() * (qreal)(+dirY) );
-            }
-        }
-
-        // Adjusting Cursor shape
-
-        QPoint mousePosition( event->x(), event->y() );
-        
-        // Find out if there are data items and if one has defined an action
-        QList<AbstractDataPluginItem *> dataItems
-            = MarbleWidgetInputHandler::d->m_widget->whichItemAt( mousePosition );
-        bool dataAction = false;
-        QPointer<AbstractDataPluginItem> toolTipItem;
-        QList<AbstractDataPluginItem *>::iterator it = dataItems.begin();
-        QList<AbstractDataPluginItem *>::iterator const end = dataItems.end();
-        for (; it != end && dataAction == false && toolTipItem.isNull(); ++it ) {
-            if ( (*it)->action() ) {
-                dataAction = true;
-            }
-
-            if ( !(*it)->toolTip().isNull() && toolTipItem.isNull() ) {
-                toolTipItem = (*it);
-            }
-        }
-
-        if ( toolTipItem.isNull() ) {
-            d->m_toolTipTimer.stop();
-        }
-        else if ( !( d->m_lastToolTipItem.data() == toolTipItem.data() ) ) {
-            d->m_toolTipTimer.start();
-            d->m_lastToolTipItem = toolTipItem;
-            d->m_toolTipPosition = mousePosition;
-        }
-        else {
-            if ( !d->m_toolTipTimer.isActive() ) {
-                d->m_toolTipTimer.start();
-            }
-
-            d->m_toolTipPosition = mousePosition;
-        }
-
-        if ( ( MarbleWidgetInputHandler::d->m_widget->whichFeatureAt( mousePosition ).size() == 0 )
-             && ( !dataAction ) )
-        {
-            if ( !d->m_leftPressed )
-                d->m_arrowCur [1][1] = QCursor( Qt::OpenHandCursor );
-            else
-                d->m_arrowCur [1][1] = QCursor( Qt::ClosedHandCursor );
-        }
-        else {
-            if ( !d->m_leftPressed )
-                d->m_arrowCur [1][1] = QCursor( Qt::PointingHandCursor );
-        }
-
-        MarbleWidgetInputHandler::d->m_widget->setCursor( d->m_arrowCur[dirX+1][dirY+1] );
-
-        // let others, especially float items, still process the event
-        // Mouse move events need to be eaten to avoid the default oxygen behavior of
-        // moving the window around when we don't handle the event. See bug 242414.
-        return event->type() != QEvent::MouseMove;
+        d->m_lmbTimer.stop();                
+        if ( polarity < 0 )
+            MarbleWidgetInputHandler::d->m_widget->rotateBy( -MarbleWidgetInputHandler::d->m_widget->moveStep() * (qreal)(+dirX),
+                                                              MarbleWidgetInputHandler::d->m_widget->moveStep() * (qreal)(+dirY) );
+        else
+            MarbleWidgetInputHandler::d->m_widget->rotateBy( -MarbleWidgetInputHandler::d->m_widget->moveStep() * (qreal)(-dirX),
+                                                              MarbleWidgetInputHandler::d->m_widget->moveStep() * (qreal)(+dirY) );
     }
-    else {
-        if ( e->type() == QEvent::Wheel ) {
 
-            QWheelEvent *wheelevt = static_cast<QWheelEvent*>( e );
+    updateMouseCursor( event );
+}
 
+void MarbleWidgetDefaultInputHandler::mouseReleaseEvent( QMouseEvent *event )
+{
+    QRegion activeRegion = MarbleWidgetInputHandler::d->m_widget->activeRegion();
+    if ( activeRegion.contains( event->pos() ) || d->m_selectionRubber->isVisible() ) {
+
+        // Regarding mouse button releases:
+        if ( event->button() == Qt::LeftButton )
+        {
+
+            //emit current coordinates to be be interpreted
+            //as requested
+            emit mouseClickScreenPosition( d->m_leftPressedX, d->m_leftPressedY );
+
+            MarbleWidgetInputHandler::d->m_widget->setViewContext( Still );
+        }
+
+        if ( event->button() == Qt::MidButton ) {
+            MarbleWidgetInputHandler::d->m_widget->setViewContext( Still );
+        }
+
+        if ( event->button() == Qt::RightButton) {
+        }
+
+        if ( event->button() == Qt::LeftButton 
+                && d->m_selectionRubber->isVisible() ) 
+        {
+            qDebug("Marble: Leaving selection");
+            QRect r( MarbleWidgetInputHandler::d->m_widget->mapFromGlobal( d->m_selectionRubber->geometry().topLeft() ),
+                        MarbleWidgetInputHandler::d->m_widget->mapFromGlobal( d->m_selectionRubber->geometry().bottomRight() ));
+            MarbleWidgetInputHandler::d->m_widget->setSelection( r );
+            d->m_selectionRubber->hide();
+        }
+    }
+
+    updateMouseCursor( event );
+}
+
+#ifndef QT_NO_WHEELEVENT
+void MarbleWidgetDefaultInputHandler::wheelEvent( QWheelEvent *wheelevt )
+{
             MarbleWidget *marbleWidget = MarbleWidgetInputHandler::d->m_widget;
             marbleWidget->setViewContext( Animation );
 
@@ -726,60 +765,54 @@ bool MarbleWidgetDefaultInputHandler::eventFilter( QObject* o, QEvent* e )
             d->ZoomAt(MarbleWidgetInputHandler::d->m_widget, wheelevt->pos(), newDistance);
 
             MarbleWidgetInputHandler::d->m_mouseWheelTimer->start( 400 );
-            return true;
-        }
-#if QT_VERSION >= 0x40600
-        else if ( e->type() == QEvent::TouchBegin ||
-                  e->type() == QEvent::TouchUpdate ||
-                  e->type() == QEvent::TouchEnd) {
-
-            QList<QTouchEvent::TouchPoint> touchPoints = static_cast<QTouchEvent *>( e )->touchPoints();
-            if (touchPoints.count() == 2) {
-                const QTouchEvent::TouchPoint &touchPoint0 = touchPoints.first();
-                const QTouchEvent::TouchPoint &touchPoint1 = touchPoints.last();
-                const QLineF line0(touchPoint0.lastPos(), touchPoint1.lastPos());
-                const QLineF line1(touchPoint0.pos(), touchPoint1.pos());
-                //scaleFactor is the ratio the view will be scaled compared to now,
-                // 1:the same, 2: the double, 0.5: half
-                qreal scaleFactor = 1;
-
-                if (line0.length() > 0) {
-                    scaleFactor = line1.length() / line0.length();
-                }
-
-                MarbleWidget *marbleWidget = MarbleWidgetInputHandler::d->m_widget;
-
-                marbleWidget->setViewContext( Animation );
-
-                qreal  destLat;
-                qreal  destLon;
-                QPointF center = line1.pointAt(0.5);
-                bool isValid = marbleWidget->geoCoordinates(center.x(), center.y(),
-                             destLon, destLat, GeoDataCoordinates::Radian );
-
-                if (isValid) {
-                    marbleWidget->viewport()->setFocusPoint(GeoDataCoordinates(destLon, destLat));
-                }
-
-                //convert the scaleFactor to be 0: the same: < 0: smaller, > 0: bigger and make it bigger by multiplying for an arbitrary big value
-                marbleWidget->zoomViewBy( (scaleFactor-1)*200);
-                MarbleWidgetInputHandler::d->m_mouseWheelTimer->start( 400 );
-            }
-        }
-#endif
-        else
-            return false;
-    }
-    return QObject::eventFilter( o, e );
 }
+#endif
 
-bool MarbleWidgetDefaultInputHandler::keyEvent( MarbleWidget * widget, QEvent* e )
+#if QT_VERSION >= 0x40600
+void MarbleWidgetDefaultInputHandler::touchEvent( QTouchEvent *event )
 {
-    if ( e->type() == QEvent::KeyPress ) {
-        QKeyEvent const * const k = dynamic_cast<QKeyEvent const * const>( e );
-        Q_ASSERT( k );
+    QList<QTouchEvent::TouchPoint> touchPoints = event->touchPoints();
+    if (touchPoints.count() == 2) {
+        const QTouchEvent::TouchPoint &touchPoint0 = touchPoints.first();
+        const QTouchEvent::TouchPoint &touchPoint1 = touchPoints.last();
+        const QLineF line0(touchPoint0.lastPos(), touchPoint1.lastPos());
+        const QLineF line1(touchPoint0.pos(), touchPoint1.pos());
+        //scaleFactor is the ratio the view will be scaled compared to now,
+        // 1:the same, 2: the double, 0.5: half
+        qreal scaleFactor = 1;
 
-        switch ( k->key() ) {
+        if (line0.length() > 0) {
+            scaleFactor = line1.length() / line0.length();
+        }
+
+        MarbleWidget *marbleWidget = MarbleWidgetInputHandler::d->m_widget;
+
+        marbleWidget->setViewContext( Animation );
+
+        qreal  destLat;
+        qreal  destLon;
+        QPointF center = line1.pointAt(0.5);
+        bool isValid = marbleWidget->geoCoordinates(center.x(), center.y(),
+                        destLon, destLat, GeoDataCoordinates::Radian );
+
+        if (isValid) {
+            marbleWidget->viewport()->setFocusPoint(GeoDataCoordinates(destLon, destLat));
+        }
+
+        //convert the scaleFactor to be 0: the same: < 0: smaller, > 0: bigger and make it bigger by multiplying for an arbitrary big value
+        marbleWidget->zoomViewBy( (scaleFactor-1)*200);
+        MarbleWidgetInputHandler::d->m_mouseWheelTimer->start( 400 );
+    }
+}
+#endif
+
+bool MarbleWidgetDefaultInputHandler::keyEvent( QKeyEvent* e )
+{
+    MarbleWidget * widget = MarbleWidgetInputHandler::d->m_widget;
+
+    if ( e->type() == QEvent::KeyPress ) {
+
+        switch ( e->key() ) {
         case Qt::Key_Left:
             widget->moveLeft();
             break;
