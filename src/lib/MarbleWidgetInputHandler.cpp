@@ -438,7 +438,7 @@ void MarbleWidgetDefaultInputHandler::updateMouseCursor( const QMouseEvent *e )
     int dirY = 0;
 
     QRegion activeRegion = MarbleWidgetInputHandler::d->m_widget->activeRegion();
-    if ( !activeRegion.contains( e->pos() ) && !d->m_selectionRubber->isVisible() ) {
+    if ( !activeRegion.contains( e->pos() ) && !d->m_selectionRubber->isVisible() && e->buttons() == Qt::NoButton ) {
         QRect boundingRect = MarbleWidgetInputHandler::d->m_widget->mapRegion().boundingRect();
 
         if ( boundingRect.width() != 0 ) {
@@ -530,30 +530,27 @@ bool MarbleWidgetDefaultInputHandler::mouseMoveEvent( QMouseEvent *e )
         }
     }
 
-    QRegion activeRegion = MarbleWidgetInputHandler::d->m_widget->activeRegion();
-    if ( activeRegion.contains( e->pos() ) || d->m_selectionRubber->isVisible() ) {
-        // Regarding all kinds of mouse moves:
-        if ( leftPressed && !d->m_selectionRubber->isVisible() ) {
-            qreal radius = ( qreal )( MarbleWidgetInputHandler::d->m_widget->radius() );
-            int deltax = e->x() - d->m_leftPressedX;
-            int deltay = e->y() - d->m_leftPressedY;
+    // Regarding all kinds of mouse moves:
+    if ( leftPressed && !d->m_selectionRubber->isVisible() ) {
+        qreal radius = ( qreal )( MarbleWidgetInputHandler::d->m_widget->radius() );
+        int deltax = e->x() - d->m_leftPressedX;
+        int deltay = e->y() - d->m_leftPressedY;
 
-            if ( abs( deltax ) > d->m_dragThreshold
-                    || abs( deltay ) > d->m_dragThreshold ) {
+        if ( abs( deltax ) > d->m_dragThreshold
+                || abs( deltay ) > d->m_dragThreshold ) {
 
-                d->m_lmbTimer.stop();
-                MarbleWidgetInputHandler::d->m_widget->centerOn( RAD2DEG * ( qreal )( d->m_leftPressedLon )
-                                                                    - 90.0 * d->m_leftPressedDirection * deltax / radius,
-                                                                    RAD2DEG * ( qreal )( d->m_leftPressedLat )
-                                                                    + 90.0 * deltay / radius );
-            }
+            d->m_lmbTimer.stop();
+            MarbleWidgetInputHandler::d->m_widget->centerOn( RAD2DEG * ( qreal )( d->m_leftPressedLon )
+                                                                - 90.0 * d->m_leftPressedDirection * deltax / radius,
+                                                             RAD2DEG * ( qreal )( d->m_leftPressedLat )
+                                                                + 90.0 * deltay / radius );
         }
+    }
 
-        if ( midPressed ) {
-            int eventy = e->y();
-            int dy = d->m_midPressedY - eventy;
-            MarbleWidgetInputHandler::d->m_widget->setRadius( d->m_radiusWhenPressed * pow( 1.005, dy ) );
-        }
+    if ( midPressed ) {
+        int eventy = e->y();
+        int dy = d->m_midPressedY - eventy;
+        MarbleWidgetInputHandler::d->m_widget->setRadius( d->m_radiusWhenPressed * pow( 1.005, dy ) );
     }
 
     // Do not handle (and therefore eat) mouse press and release events
@@ -671,40 +668,42 @@ void MarbleWidgetDefaultInputHandler::mousePressEvent( QMouseEvent *event )
             d->m_selectionRubber->show();
         }
     }
+    else
+    {
+        if ( event->button() == Qt::LeftButton ) {
 
-    if ( event->button() == Qt::LeftButton ) {
+            const QRect boundingRect = MarbleWidgetInputHandler::d->m_widget->mapRegion().boundingRect();
+            const int polarity = MarbleWidgetInputHandler::d->m_widget->viewport()->polarity();
 
-        const QRect boundingRect = MarbleWidgetInputHandler::d->m_widget->mapRegion().boundingRect();
-        const int polarity = MarbleWidgetInputHandler::d->m_widget->viewport()->polarity();
+            int dirX = 0;
+            int dirY = 0;
 
-        int dirX = 0;
-        int dirY = 0;
+            if ( boundingRect.width() != 0 ) {
+                dirX = (int)( 3 * ( event->x() - boundingRect.left() ) / boundingRect.width() ) - 1;
+            }
 
-        if ( boundingRect.width() != 0 ) {
-            dirX = (int)( 3 * ( event->x() - boundingRect.left() ) / boundingRect.width() ) - 1;
+            if ( dirX > 1 )
+                dirX = 1;
+            if ( dirX < -1 )
+                dirX = -1;
+
+            if ( boundingRect.height() != 0 ) {
+                dirY = (int)( 3 * ( event->y() - boundingRect.top() ) / boundingRect.height() ) - 1;
+            }
+
+            if ( dirY > 1 )
+                dirY = 1;
+            if ( dirY < -1 )
+                dirY = -1;
+
+            d->m_lmbTimer.stop();                
+            if ( polarity < 0 )
+                MarbleWidgetInputHandler::d->m_widget->rotateBy( -MarbleWidgetInputHandler::d->m_widget->moveStep() * (qreal)(+dirX),
+                                                                MarbleWidgetInputHandler::d->m_widget->moveStep() * (qreal)(+dirY) );
+            else
+                MarbleWidgetInputHandler::d->m_widget->rotateBy( -MarbleWidgetInputHandler::d->m_widget->moveStep() * (qreal)(-dirX),
+                                                                MarbleWidgetInputHandler::d->m_widget->moveStep() * (qreal)(+dirY) );
         }
-
-        if ( dirX > 1 )
-            dirX = 1;
-        if ( dirX < -1 )
-            dirX = -1;
-
-        if ( boundingRect.height() != 0 ) {
-            dirY = (int)( 3 * ( event->y() - boundingRect.top() ) / boundingRect.height() ) - 1;
-        }
-
-        if ( dirY > 1 )
-            dirY = 1;
-        if ( dirY < -1 )
-            dirY = -1;
-
-        d->m_lmbTimer.stop();                
-        if ( polarity < 0 )
-            MarbleWidgetInputHandler::d->m_widget->rotateBy( -MarbleWidgetInputHandler::d->m_widget->moveStep() * (qreal)(+dirX),
-                                                              MarbleWidgetInputHandler::d->m_widget->moveStep() * (qreal)(+dirY) );
-        else
-            MarbleWidgetInputHandler::d->m_widget->rotateBy( -MarbleWidgetInputHandler::d->m_widget->moveStep() * (qreal)(-dirX),
-                                                              MarbleWidgetInputHandler::d->m_widget->moveStep() * (qreal)(+dirY) );
     }
 
     updateMouseCursor( event );
