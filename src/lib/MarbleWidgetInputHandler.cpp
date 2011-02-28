@@ -156,6 +156,7 @@ class MarbleWidgetDefaultInputHandler::Private
     int m_leftPressedDirection;
     // The mouse pointer x position when the left mouse button has been pressed.
     int m_leftPressedX;
+    bool m_blocked;
     // The mouse pointer y position when the left mouse button has been pressed.
     int m_leftPressedY;
     // The mouse pointer y position when the middle mouse button has been pressed.
@@ -184,7 +185,8 @@ class MarbleWidgetDefaultInputHandler::Private
 };
 
 MarbleWidgetDefaultInputHandler::Private::Private()
-    : m_dragThreshold( 3 ),
+    : m_blocked( false ),
+      m_dragThreshold( 3 ),
       m_popupmenu( 0 )
 {
     m_curpmtl.load( MarbleDirs::path("bitmaps/cursor_tl.xpm") );
@@ -532,9 +534,34 @@ bool MarbleWidgetDefaultInputHandler::mouseMoveEvent( QMouseEvent *e )
 
     // Regarding all kinds of mouse moves:
     if ( leftPressed && !d->m_selectionRubber->isVisible() ) {
+        QPoint mousePos = e->pos();
+        if ( e->x() > MarbleWidgetInputHandler::d->m_widget->width() - 5 ) {
+            mousePos.setX( e->x() - MarbleWidgetInputHandler::d->m_widget->width() + 10 );
+        }
+        if ( e->x() < 5 ) {
+            mousePos.setX( MarbleWidgetInputHandler::d->m_widget->width() + e->x() - 10 );
+        }
+        if ( e->y() > MarbleWidgetInputHandler::d->m_widget->height() - 5 ) {
+            mousePos.setY( e->y() - MarbleWidgetInputHandler::d->m_widget->height() + 10 );
+        }
+        if ( e->y() < 5 ) {
+            mousePos.setY( MarbleWidgetInputHandler::d->m_widget->height() + e->y() - 10 );
+        }
+        if ( mousePos != e->pos() ) {
+            if ( d->m_blocked )
+                return true;
+            d->m_blocked = true;
+            QCursor::setPos(MarbleWidgetInputHandler::d->m_widget->mapToGlobal(mousePos));
+            d->m_leftPressedX += mousePos.x() - e->x();
+            d->m_leftPressedY += mousePos.y() - e->y();
+        }
+        else {
+            d->m_blocked = false;
+        }
+
         qreal radius = ( qreal )( MarbleWidgetInputHandler::d->m_widget->radius() );
-        int deltax = e->x() - d->m_leftPressedX;
-        int deltay = e->y() - d->m_leftPressedY;
+        int deltax = mousePos.x() - d->m_leftPressedX;
+        int deltay = mousePos.y() - d->m_leftPressedY;
 
         if ( abs( deltax ) > d->m_dragThreshold
                 || abs( deltay ) > d->m_dragThreshold ) {
