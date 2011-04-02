@@ -725,7 +725,7 @@ void MarbleMap::paint( GeoPainter &painter, QRect &dirtyRect )
 {
     QTime t;
     t.start();
-    
+
     if ( !d->m_mapTheme ) {
         mDebug() << "No theme yet!";
         d->paintMarbleSplash( painter, dirtyRect );
@@ -752,8 +752,6 @@ void MarbleMap::paint( GeoPainter &painter, QRect &dirtyRect )
                     << "ORBIT" << "ALWAYS_ON_TOP" << "FLOAT_ITEM" << "USER_TOOLS";
     d->m_layerManager.renderLayers( &painter, d->m_viewParams.viewport(), renderPositions );
 
-    customPaint( &painter );
-
     if ( d->m_showFrameRate ) {
         FpsLayer fpsLayer( &t );
         fpsLayer.render( &painter, d->m_viewParams.viewport() );
@@ -761,15 +759,6 @@ void MarbleMap::paint( GeoPainter &painter, QRect &dirtyRect )
 
     const qreal fps = 1000.0 / (qreal)( t.elapsed() );
     emit framesPerSecond( fps );
-}
-
-void MarbleMap::customPaint( GeoPainter *painter )
-{
-    Q_UNUSED( painter );
-
-    if ( !d->m_mapTheme ) {
-        return;
-    }
 }
 
 QString MarbleMap::mapThemeId() const

@@ -1046,6 +1046,7 @@ class MARBLE_EXPORT MarbleWidget : public QWidget
      * @deprecated implement LayerInterface and add it using @p addLayer()
      */
     virtual void customPaint( GeoPainter *painter );
+    friend class CustomPaintLayer;
 
  private:
     Q_DISABLE_COPY( MarbleWidget )

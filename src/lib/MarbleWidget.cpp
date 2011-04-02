@@ -133,6 +133,22 @@ class MarbleWidgetPrivate
 
 
 
+class CustomPaintLayer : public LayerInterface
+{
+public:
+    CustomPaintLayer( MarbleWidget *widget  );
+
+    virtual QStringList renderPosition() const;
+    virtual bool render( GeoPainter *painter, ViewportParams *viewport, const QString &renderPosition, GeoSceneLayer *layer );
+    virtual qreal zValue() const;
+
+private:
+    MarbleWidget *const m_widget;
+    const QStringList m_renderPosition;
+};
+
+
+
 MarbleWidget::MarbleWidget(QWidget *parent)
     : QWidget( parent ),
       d( new MarbleWidgetPrivate( new MarbleMap(), this ) )
@@ -238,6 +254,8 @@ void MarbleWidgetPrivate::construct()
     m_widget->connect( m_model->routingManager()->alternativeRoutesModel(),
                        SIGNAL( currentRouteChanged( GeoDataDocument* ) ),
                        m_widget, SLOT( repaint() ) );
+
+    m_map->addLayer( new CustomPaintLayer( m_widget ) );
 }
 
 void MarbleWidgetPrivate::moveByStep( int stepsRight, int stepsDown, FlyToMode mode )
@@ -256,6 +274,36 @@ void MarbleWidgetPrivate::repaint()
                   m_widget->viewport()->mapCoversViewport() && !m_model->mapThemeId().isEmpty() );
 
     m_widget->repaint();
+}
+
+
+CustomPaintLayer::CustomPaintLayer(MarbleWidget* widget)
+    : m_widget( widget ),
+      m_renderPosition( QStringList() << "USER_TOOLS" )
+{
+}
+
+QStringList CustomPaintLayer::renderPosition() const
+{
+    return m_renderPosition;
+}
+
+bool CustomPaintLayer::render(GeoPainter* painter, ViewportParams* viewport, const QString& renderPosition, GeoSceneLayer* layer)
+{
+    Q_UNUSED( viewport );
+    Q_UNUSED( layer );
+
+    if ( renderPosition != "USER_TOOLS" )
+        return true;
+
+    m_widget->customPaint( painter );
+
+    return true;
+}
+
+qreal CustomPaintLayer::zValue() const
+{
+    return LayerInterface::zValue();
 }
 
 // ----------------------------------------------------------------
@@ -804,7 +852,6 @@ void MarbleWidget::paintEvent( QPaintEvent *evt )
 
     // Draws the map like MarbleMap::paint does, but adds our customPaint in between
     d->m_map->paint( painter, dirtyRect );
-    customPaint( &painter );
 
     if ( !isEnabled() )
     {
