@@ -1,7 +1,6 @@
 [Desktop Entry]
 Type=Application
-TryExec=marble
-Exec=marble
+Exec=/opt/marble/bin/marble.sh
 Name=Marble
 Name[ast]=Marble
 Name[bg]=Marble
@@ -113,5 +112,9 @@ GenericName[zh_CN]=桌面地球仪
 GenericName[zh_TW]=桌面星象儀
 Icon=marble
 Terminal=false
-Categories=Qt;KDE;Education;Geography;
+StartupWMClass=marble
+X-Window-Icon=marble
 X-DocPath=marble/index.html
+X-HildonDesk-ShowInToolbar=true
+X-Osso-Service=org.kde.edu.marble
+X-Osso-Type=application/x-executable
