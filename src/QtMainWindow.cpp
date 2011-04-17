@@ -103,6 +103,7 @@ MainWindow::MainWindow(const QString& marbleDataPath, QWidget *parent) :
 {
 #ifdef Q_WS_MAEMO_5
     setAttribute( Qt::WA_Maemo5StackedWindow );
+    setAttribute( Qt::WA_Maemo5AutoOrientation );
 #endif // Q_WS_MAEMO_5
     setUpdatesEnabled( false );
 
