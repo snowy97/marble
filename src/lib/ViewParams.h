@@ -51,6 +51,7 @@ class MARBLE_EXPORT ViewParams
 
     // Getters and setters
     ViewportParams  *viewport();
+    const ViewportParams  *viewport() const;
 
 /** 
  *  The actual parameters for the look get loaded 
@@ -105,7 +106,7 @@ class MARBLE_EXPORT ViewParams
     Quaternion planetAxis() const;
     void setPlanetAxis( const Quaternion &newAxis );
 
-    void centerCoordinates( qreal &centerLon, qreal &centerLat );
+    void centerCoordinates( qreal &centerLon, qreal &centerLat ) const;
 
     int width() const;
     int height() const;

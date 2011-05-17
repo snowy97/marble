@@ -137,6 +137,11 @@ ViewportParams *ViewParams::viewport()
     return &d->m_viewport;
 }
 
+const ViewportParams *ViewParams::viewport() const
+{
+    return &d->m_viewport;
+}
+
 Projection ViewParams::projection() const
 {
     return d->m_viewport.projection();
@@ -299,7 +304,7 @@ void ViewParams::setPlanetAxis(const Quaternion &newAxis)
 */
 }
 
-void ViewParams::centerCoordinates( qreal &centerLon, qreal &centerLat )
+void ViewParams::centerCoordinates( qreal &centerLon, qreal &centerLat ) const
 {
     d->m_viewport.centerCoordinates( centerLon, centerLat );
 }

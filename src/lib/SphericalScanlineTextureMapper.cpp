@@ -40,7 +40,7 @@ private:
     StackedTileLoader *const m_tileLoader;
     const int m_tileLevel;
     QSharedPointer<QImage> m_canvasImage;
-    ViewParams *const m_viewParams;
+    const ViewParams *const m_viewParams;
     int const m_yTop;
     int const m_yBottom;
 };

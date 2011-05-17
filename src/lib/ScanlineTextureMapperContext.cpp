@@ -386,7 +386,7 @@ bool ScanlineTextureMapperContext::isOutOfTileRange( const int itLon, const int 
 }
 
 
-int ScanlineTextureMapperContext::interpolationStep( ViewParams * const viewParams )
+int ScanlineTextureMapperContext::interpolationStep( const ViewParams * const viewParams )
 {
     if ( viewParams->mapQuality() == PrintQuality ) {
         return 1;    // Don't interpolate for print quality.
@@ -398,7 +398,7 @@ int ScanlineTextureMapperContext::interpolationStep( ViewParams * const viewPara
 
     // Find the optimal interpolation interval m_nBest for the 
     // current image canvas width
-    const int width = viewParams->canvasImage()->width();
+    const int width = viewParams->canvasImagePtr()->width();
 
     int nBest = 2;
     int nEvalMin = width - 1;
