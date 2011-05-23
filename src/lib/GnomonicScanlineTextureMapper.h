@@ -14,6 +14,9 @@
 
 #include "TextureMapperInterface.h"
 
+#include <QtCore/QThreadPool>
+
+
 namespace Marble
 {
 
@@ -34,10 +37,13 @@ class GnomonicScanlineTextureMapper : public TextureMapperInterface
     virtual void setRepaintNeeded();
 
  private:
+    class RenderJob;
+
     void mapTexture( ViewParams *viewParams );
 
     StackedTileLoader *const m_tileLoader;
     bool m_repaintNeeded;
+    QThreadPool m_threadPool;
 };
 
 }

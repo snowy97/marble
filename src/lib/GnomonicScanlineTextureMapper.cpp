@@ -16,6 +16,7 @@
 
 // Qt
 #include <QtCore/qmath.h>
+#include <QtCore/QRunnable>
 #include <QtGui/QImage>
 
 // Marble
@@ -30,6 +31,33 @@
 #include "MathHelper.h"
 
 using namespace Marble;
+
+class GnomonicScanlineTextureMapper::RenderJob : public QRunnable
+{
+public:
+    RenderJob( StackedTileLoader *tileLoader, int tileLevel, ViewParams *viewParams, int yTop, int yBottom );
+
+    virtual void run();
+
+private:
+    StackedTileLoader *const m_tileLoader;
+    const int m_tileLevel;
+    QSharedPointer<QImage> m_canvasImage;
+    ViewParams *const m_viewParams;
+    const int m_yPaintedTop;
+    const int m_yPaintedBottom;
+};
+
+GnomonicScanlineTextureMapper::RenderJob::RenderJob( StackedTileLoader *tileLoader, int tileLevel, ViewParams *viewParams, int yTop, int yBottom )
+    : m_tileLoader( tileLoader ),
+      m_tileLevel( tileLevel ),
+      m_canvasImage( viewParams->canvasImagePtr() ),
+      m_viewParams( viewParams ),
+      m_yPaintedTop( yTop ),
+      m_yPaintedBottom( yBottom )
+{
+}
+
 
 GnomonicScanlineTextureMapper::GnomonicScanlineTextureMapper( StackedTileLoader *tileLoader,
                                                               QObject *parent )
@@ -68,36 +96,54 @@ void GnomonicScanlineTextureMapper::mapTexture( ViewParams *viewParams )
     // Reset backend
     m_tileLoader->resetTilehash();
 
-    QSharedPointer<QImage> canvasImage = viewParams->canvasImagePtr();
+    const int imageHeight = viewParams->canvasImagePtr()->height();
+
+    const int numThreads = m_threadPool.maxThreadCount();
+    const int yStep = imageHeight / numThreads;
+    for ( int i = 0; i < numThreads; ++i ) {
+        const int yStart =  i      * yStep;
+        const int yEnd   = (i + 1) * yStep;
+        QRunnable *const job = new RenderJob( m_tileLoader, tileZoomLevel(), viewParams, yStart, yEnd );
+        m_threadPool.start( job );
+    }
+
+    m_threadPool.waitForDone();
+
+    m_tileLoader->cleanupTilehash();
+}
+
+void GnomonicScanlineTextureMapper::RenderJob::run()
+{
+    QSharedPointer<QImage> canvasImage = m_viewParams->canvasImagePtr();
 
     const int imageHeight = canvasImage->height();
     const int imageWidth  = canvasImage->width();
-    const qint64  radius      = viewParams->radius();
+    const qint64  radius  = m_viewParams->radius();
     // Calculate how many degrees are being represented per pixel.
     const qreal rad2Pixel = ( 2 * radius ) / M_PI;
     const qreal pixel2Rad = 1.0/rad2Pixel;
 
-    const bool interlaced   = ( viewParams->mapQuality() == LowQuality );
-    const bool highQuality  = ( viewParams->mapQuality() == HighQuality
-                             || viewParams->mapQuality() == PrintQuality );
-    const bool printQuality = ( viewParams->mapQuality() == PrintQuality );
+    const bool interlaced   = ( m_viewParams->mapQuality() == LowQuality );
+    const bool highQuality  = ( m_viewParams->mapQuality() == HighQuality
+                             || m_viewParams->mapQuality() == PrintQuality );
+    const bool printQuality = ( m_viewParams->mapQuality() == PrintQuality );
 
     // Evaluate the degree of interpolation
-    const int n = ScanlineTextureMapperContext::interpolationStep( viewParams );
+    const int n = ScanlineTextureMapperContext::interpolationStep( m_viewParams );
     const int maxInterpolationPointX = n * (int)( imageWidth / n - 1 ) + 1; 
 
     // Calculate translation of center point
     qreal centerLon, centerLat;
-    viewParams->centerCoordinates( centerLon, centerLat );
+    m_viewParams->centerCoordinates( centerLon, centerLat );
 
 
     // initialize needed variables that are modified during texture mapping:
 
-    ScanlineTextureMapperContext context( m_tileLoader, tileZoomLevel() );
+    ScanlineTextureMapperContext context( m_tileLoader, m_tileLevel );
 
 
     // Paint the map.
-    for ( int y = 0; y < imageHeight; ++y ) {
+    for ( int y = m_yPaintedTop; y < m_yPaintedBottom; ++y ) {
 
         QRgb * scanLine = (QRgb*)canvasImage->scanLine( y );
 
@@ -146,7 +192,7 @@ void GnomonicScanlineTextureMapper::mapTexture( ViewParams *viewParams )
         }
 
         // copy scanline to improve performance
-        if ( interlaced && y + 1 < imageHeight ) { 
+        if ( interlaced && y + 1 < m_yPaintedBottom ) { 
 
             const int pixelByteSize = canvasImage->bytesPerLine() / imageWidth;
 
@@ -156,8 +202,6 @@ void GnomonicScanlineTextureMapper::mapTexture( ViewParams *viewParams )
             ++y;
         }
     }
-
-    m_tileLoader->cleanupTilehash();
 }
 
 
