@@ -61,8 +61,8 @@ public:
 };
 
 ViewportParamsPrivate::ViewportParamsPrivate()
-    : m_projection( Spherical ),
-      m_currentProjection( &s_sphericalProjection ),
+    : m_projection( Mercator ),
+      m_currentProjection( &s_mercatorProjection ),
       m_planetAxis(),
       m_planetAxisMatrix(),
       m_radius( 2000 ),
