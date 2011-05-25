@@ -78,7 +78,8 @@ MarbleMapPrivate::MarbleMapPrivate( MarbleMap *parent, MarbleModel *model )
           m_layerManager( model, parent ),
           m_textureLayer( model->mapThemeManager(), model->downloadManager(), model->sunLocator() ),
           m_placemarkLayout( model->placemarkModel(), model->placemarkSelectionModel(), parent ),
-          m_measureTool( model )
+          m_measureTool( model ),
+          m_showFrameRate( false )
 {
     GeoDataObject *object = static_cast<GeoDataObject*>( model->treeModel()->index(0, 0, QModelIndex()).internalPointer());
     GeoDataDocument *document = dynamic_cast<GeoDataDocument*>( object->parent() );
@@ -111,10 +112,6 @@ void MarbleMapPrivate::construct()
                        m_parent,        SIGNAL( repaintNeeded( QRegion ) ) );
     QObject::connect ( &m_layerManager, SIGNAL( renderPluginInitialized( RenderPlugin * ) ),
                        m_parent,        SIGNAL( renderPluginInitialized( RenderPlugin * ) ) );
-
-    // FloatItems
-    m_showFrameRate = false;
-
 
     m_parent->connect( m_model->sunLocator(), SIGNAL( updateSun() ),
                        &m_textureLayer,       SLOT( update() ) );
