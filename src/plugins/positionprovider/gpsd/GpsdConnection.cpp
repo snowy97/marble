@@ -20,6 +20,9 @@ using namespace Marble;
 
 GpsdConnection::GpsdConnection( QObject* parent )
     : QObject( parent ),
+#if defined( GPSD_API_MAJOR_VERSION ) && ( GPSD_API_MAJOR_VERSION >= 5 )
+      m_gpsd("localhost", DEFAULT_GPSD_PORT),
+#endif
       m_timer( 0 )
 {
     m_oldLocale = setlocale( LC_NUMERIC, NULL );
@@ -35,7 +38,11 @@ GpsdConnection::~GpsdConnection()
 void GpsdConnection::initialize()
 {
     m_timer.stop();
+#if defined( GPSD_API_MAJOR_VERSION ) && ( GPSD_API_MAJOR_VERSION >= 5 ) && defined( WATCH_ENABLE )
+    gps_data_t* data = m_gpsd.read();
+#else
     gps_data_t* data = m_gpsd.open();
+#endif
     if ( data ) {
         m_status = PositionProviderStatusAcquiring;
         emit statusChanged( m_status );
@@ -82,8 +89,16 @@ void GpsdConnection::initialize()
 void GpsdConnection::update()
 {
 #if defined( GPSD_API_MAJOR_VERSION ) && ( GPSD_API_MAJOR_VERSION >= 3 ) && defined( PACKET_SET )
+#if defined( GPSD_API_MAJOR_VERSION ) && ( GPSD_API_MAJOR_VERSION >= 5 )
+    if ( m_gpsd.waiting(0) ) {
+#else
     if ( m_gpsd.waiting() ) {
+#endif
+#if defined( GPSD_API_MAJOR_VERSION ) && ( GPSD_API_MAJOR_VERSION >= 5 )
+        gps_data_t* data = m_gpsd.read();
+#else
         gps_data_t* data = m_gpsd.poll();
+#endif
         if ( data && data->set & PACKET_SET ) {
             emit gpsdInfo( *data );
         }
