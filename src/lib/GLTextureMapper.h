@@ -34,7 +34,6 @@ class GLTextureMapper : public TextureMapperInterface
 
  public:
     GLTextureMapper( StackedTileLoader *tileLoader,
-                     QGLContext *glContext,
                      QObject *parent = 0 );
     virtual ~GLTextureMapper();
 
