@@ -18,7 +18,7 @@
 namespace Marble
 {
 
-static GeoTagWriterRegistrar s_writerLookAt(
+static GeoTagWriterRegistrar s_writerLinearRing(
     GeoTagWriter::QualifiedName( GeoDataTypes::GeoDataLinearRingType,
                                  kml::kmlTag_nameSpace22 ),
     new KmlLinearRingTagWriter );
