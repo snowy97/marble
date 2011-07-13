@@ -29,6 +29,8 @@ else( QTONLY )
     target_link_libraries( ${_target_name} ${QT_QTCORE_LIBRARY}
                                            ${QT_QTDBUS_LIBRARY}
                                            ${QT_QTGUI_LIBRARY}
+                                           ${QT_QTSCRIPT_LIBRARY}
+                                           ${QT_QTWEBKIT_LIBRARY}
                                            ${QT_QTXML_LIBRARY}
                                            ${QT_QTSVG_LIBRARY}
                                            ${QT_QTNETWORK_LIBRARY}
