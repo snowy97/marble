@@ -1,5 +1,14 @@
 # the place to put in common cmake macros
 # this is needed to minimize the amount of errors to do
+macro( marble_add_library _target_name _type )
+    set( _src ${ARGN} )
+    if( QTONLY )
+        add_library( ${_target_name} ${_type} ${_src} )
+    else( QTONLY )
+        kde4_add_library( ${_target_name} ${_type} ${_src} )
+    endif( QTONLY )
+endmacro( marble_add_library _target_name )
+
 macro( marble_add_plugin _target_name )
 set( _src ${ARGN} )
 if( QTONLY )
