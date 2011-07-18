@@ -58,6 +58,18 @@ static const uchar **jumpTableFromQImage8( const QImage &img )
 }
 
 
+StackedTilePrivate::StackedTilePrivate() :
+    m_id(),
+    m_resultTile(),
+    m_depth( m_resultTile.depth() ),
+    m_isGrayscale( m_resultTile.isGrayscale() ),
+    m_tiles(),
+    jumpTable8( 0 ),
+    jumpTable32( 0 ),
+    m_byteCount( calcByteCount( m_resultTile, m_tiles ) )
+{
+}
+
 StackedTilePrivate::StackedTilePrivate( const TileId &id, const QImage &resultImage, QVector<QSharedPointer<TextureTile> > const &tiles ) :
       m_id( id ), 
       m_resultTile( resultImage ),
@@ -221,6 +233,18 @@ int StackedTilePrivate::calcByteCount( const QImage &resultImage, const QVector<
 }
 
 
+const StackedTile StackedTile::null( new StackedTilePrivate() );
+
+StackedTile::StackedTile()
+    : d( null.d )
+{
+}
+
+StackedTile::StackedTile( const StackedTile &other )
+    : d( other.d )
+{
+}
+
 StackedTile::StackedTile( TileId const &id, QImage const &resultImage, QVector<QSharedPointer<TextureTile> > const &tiles )
     : d( new StackedTilePrivate( id, resultImage, tiles ) )
 {
@@ -236,9 +260,20 @@ StackedTile::StackedTile( TileId const &id, QImage const &resultImage, QVector<Q
     }
 }
 
+StackedTile::StackedTile( StackedTilePrivate *d_ )
+    : d( d_ )
+{
+}
+
 StackedTile::~StackedTile()
 {
-    delete d;
+}
+
+StackedTile &StackedTile::operator=( const StackedTile &other )
+{
+    d = other.d;
+
+    return *this;
 }
 
 TileId const& StackedTile::id() const
@@ -264,6 +299,11 @@ uint StackedTile::pixelF( qreal x, qreal y ) const
 uint StackedTile::pixelF( qreal x, qreal y, const QRgb& topLeftValue ) const
 {
     return d->pixelF( x, y, topLeftValue );
+}
+
+bool StackedTile::isNull() const
+{
+    return d == null.d;
 }
 
 int StackedTile::depth() const

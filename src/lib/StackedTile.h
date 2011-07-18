@@ -13,6 +13,7 @@
 #ifndef MARBLE_STACKEDTILE_H
 #define MARBLE_STACKEDTILE_H
 
+#include <QtCore/QSharedDataPointer>
 #include <QtCore/QSharedPointer>
 #include <QtCore/QVector>
 #include <QtGui/QColor>
@@ -57,11 +58,13 @@ class TileId;
 
 class StackedTile
 {
-    friend class StackedTileLoader;
-
  public:
+    StackedTile();
+    StackedTile( const StackedTile &other );
     explicit StackedTile( TileId const &id, QImage const &resultImage, QVector<QSharedPointer<TextureTile> > const &tiles );
-    virtual ~StackedTile();
+    ~StackedTile();
+
+    StackedTile &operator=( const StackedTile &other );
 
 /*!
     \brief Returns a unique ID for the tile.
@@ -69,7 +72,7 @@ class StackedTile
 */
     TileId const& id() const;
 
-
+    bool isNull() const;
     int depth() const;
     int numBytes() const;
 
@@ -107,10 +110,11 @@ class StackedTile
     // This method passes the top left pixel (if known already) for better performance
     uint pixelF( qreal x, qreal y, const QRgb& pixel ) const; 
 
- private:
-    Q_DISABLE_COPY( StackedTile )
+    static const StackedTile null;
 
-    StackedTilePrivate *d;
+ private:
+    explicit StackedTile( StackedTilePrivate * );
+    QSharedDataPointer<StackedTilePrivate> d;
 };
 
 }

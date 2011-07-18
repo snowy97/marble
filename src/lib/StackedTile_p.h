@@ -27,7 +27,7 @@ namespace Marble
 {
 class TextureTile;
 
-class StackedTilePrivate
+class StackedTilePrivate : public QSharedData
 {
  public:
     const TileId    m_id;
@@ -39,6 +39,7 @@ class StackedTilePrivate
     const uint    **const jumpTable32;
     const int m_byteCount;
 
+    StackedTilePrivate();
     explicit StackedTilePrivate( const TileId &id, const QImage &resultImage, QVector<QSharedPointer<TextureTile> > const &tiles );
     virtual ~StackedTilePrivate();
 
