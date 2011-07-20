@@ -55,8 +55,6 @@ public:
         m_tileCache.setMaxCost( 20000 * 1024 ); // Cache size measured in bytes
     }
 
-    const StackedTile *createTile( TileId const &stackedTileId );
-
     void detectMaxTileLevel();
     QVector<GeoSceneTexture const *>
         findRelevantTextureLayers( TileId const & stackedTileId ) const;
@@ -75,6 +73,8 @@ StackedTileLoader::StackedTileLoader( TileLoader *tileLoader,
                                       MergedLayerDecorator *layerDecorator )
     : d( new StackedTileLoaderPrivate( tileLoader, layerDecorator ) )
 {
+    connect( d->m_layerDecorator, SIGNAL( tileFinished( const TileId &, const StackedTile & ) ),
+             this, SLOT( insert( const TileId &, const StackedTile & ) ) );
 }
 
 StackedTileLoader::~StackedTileLoader()
@@ -181,30 +181,6 @@ const StackedTile* StackedTileLoader::loadTile( TileId const & stackedTileId )
     return stackedTile;
 }
 
-const StackedTile *StackedTileLoaderPrivate::createTile( TileId const & stackedTileId )
-{
-    QVector<QSharedPointer<TextureTile> > tiles;
-    QVector<GeoSceneTexture const *> const textureLayers = findRelevantTextureLayers( stackedTileId );
-    QVector<GeoSceneTexture const *>::const_iterator pos = textureLayers.constBegin();
-    QVector<GeoSceneTexture const *>::const_iterator const end = textureLayers.constEnd();
-    for (; pos != end; ++pos ) {
-        GeoSceneTexture const * const textureLayer = *pos;
-        TileId const tileId( textureLayer->sourceDir(), stackedTileId.zoomLevel(),
-                             stackedTileId.x(), stackedTileId.y() );
-        mDebug() << "StackedTileLoader::loadTile: tile" << textureLayer->sourceDir()
-                 << tileId.toString() << textureLayer->tileSize();
-        const QImage tileImage = m_tileLoader->loadTile( tileId, DownloadBrowse );
-        QSharedPointer<TextureTile> tile( new TextureTile( tileId, tileImage, textureLayer->blending() ) ); 
-        tiles.append( tile );
-    }
-    Q_ASSERT( !tiles.isEmpty() );
-
-    const QImage resultImage = m_layerDecorator->merge( stackedTileId, tiles );
-    const StackedTile *const stackedTile = new StackedTile( stackedTileId, resultImage, tiles );
-
-    return stackedTile;
-}
-
 void StackedTileLoader::downloadTile( TileId const & stackedTileId )
 {
     QVector<GeoSceneTexture const *> const textureLayers = d->findRelevantTextureLayers( stackedTileId );
@@ -226,17 +202,14 @@ quint64 StackedTileLoader::volatileCacheLimit() const
 void StackedTileLoader::reloadVisibleTiles()
 {
     foreach ( TileId const & id, d->m_tilesOnDisplay.keys() ) {
-        if ( id.zoomLevel() != 0 && !d->m_tileCache.contains( id ) ) {
-            const StackedTile * tile = d->createTile( id );
-            d->m_tileCache.insert( id, tile, tile->numBytes() );
-        }
-        const StackedTile *const displayedTile = ( id.zoomLevel() == 0 ? d->m_levelZeroHash.value( id )
-                                                                       : d->m_tileCache.object( id ) );
-        foreach ( QSharedPointer<TextureTile> const & tile, displayedTile->tiles() ) {
+        QVector<const GeoSceneTexture *> textures = d->findRelevantTextureLayers( id );
+
+        foreach ( const GeoSceneTexture *texture, textures ) {
+            const TileId textureId = TileId( texture->sourceDir(), id.zoomLevel(), id.x(), id.y() );
             // it's debatable here, whether DownloadBulk or DownloadBrowse should be used
             // but since "reload" or "refresh" seems to be a common action of a browser and it
             // allows for more connections (in our model), use "DownloadBrowse"
-            d->m_tileLoader->reloadTile( tile->id(), DownloadBrowse );
+            d->m_tileLoader->reloadTile( textureId, DownloadBrowse );
         }
     }
 
@@ -277,17 +250,10 @@ void StackedTileLoader::update()
         }
     }
 
-    bool needsUpdate = false;
     foreach ( TileId const & id, requiredTiles ) {
             if ( !d->m_tileCache.contains( id ) ) {
-                const StackedTile *const tile = d->createTile( id );
-                d->m_tileCache.insert( id , tile, tile->numBytes() );
-                needsUpdate = true;
+                d->m_layerDecorator->requestTile( id, d->findRelevantTextureLayers( id ) );
             }
-    }
-
-    if ( needsUpdate ) {
-        emit tileUpdatesAvailable();
     }
 }
 
@@ -300,40 +266,42 @@ void StackedTileLoader::updateTile( TileId const &tileId, QImage const &tileImag
 
     const TileId stackedTileId( 0, tileId.zoomLevel(), tileId.x(), tileId.y() );
 
-    if ( d->m_tilesOnDisplay.contains( stackedTileId ) ) {
-        const StackedTile *displayedTile = ( stackedTileId.zoomLevel() == 0 ? d->m_levelZeroHash.take( stackedTileId )
-                                                                            : d->m_tileCache.take( stackedTileId ) );
-
-        if ( displayedTile == 0 || displayedTile->tiles().isEmpty() ) {
-            delete displayedTile;
-            displayedTile = d->createTile( stackedTileId );
-        } else {
-            QVector<QSharedPointer<TextureTile> > tiles = displayedTile->tiles();
-            delete displayedTile;
-            displayedTile = 0;
-
-            for ( int i = 0; i < tiles.count(); ++ i) {
-                if ( tiles[i]->id() == tileId ) {
-                    const Blending *blending = tiles[i]->blending();
-                    tiles[i] = QSharedPointer<TextureTile>( new TextureTile( tileId, tileImage, blending ) );
-                }
-            }
-
-            const QImage resultImage = d->m_layerDecorator->merge( stackedTileId, tiles );
-            displayedTile = new StackedTile( stackedTileId, resultImage, tiles );
-        }
-
-        if ( stackedTileId.zoomLevel() == 0 ) {
-            d->m_levelZeroHash.insert( stackedTileId, displayedTile );
-        } else {
-            d->m_tileCache.insert( stackedTileId, displayedTile, displayedTile->numBytes() );
-        }
-
-        emit tileUpdateAvailable( stackedTileId );
+    if ( !d->m_tilesOnDisplay.contains( stackedTileId ) ) {
+        d->m_tileCache.remove( stackedTileId );
         return;
     }
 
-    d->m_tileCache.remove( stackedTileId );
+    const StackedTile *const displayedTile = ( stackedTileId.zoomLevel() == 0 ? d->m_levelZeroHash.value( stackedTileId, 0 )
+                                                                              : d->m_tileCache.object( stackedTileId ) );
+
+    if ( displayedTile == 0 || displayedTile->tiles().isEmpty() ) {
+        d->m_layerDecorator->requestTile( stackedTileId, d->findRelevantTextureLayers( stackedTileId ) );
+    } else {
+        QVector<QSharedPointer<TextureTile> > tiles = displayedTile->tiles();
+
+        for ( int i = 0; i < tiles.count(); ++ i) {
+            if ( tiles[i]->id() == tileId ) {
+                const Blending *blending = tiles[i]->blending();
+                tiles[i] = QSharedPointer<TextureTile>( new TextureTile( tileId, tileImage, blending ) );
+            }
+        }
+
+        d->m_layerDecorator->requestMerge( tiles );
+    }
+}
+
+void StackedTileLoader::insert( TileId const & stackedTileId, StackedTile const & tile )
+{
+    if ( stackedTileId.zoomLevel() == 0 ) {
+        delete d->m_levelZeroHash.value( stackedTileId, 0 );
+        d->m_levelZeroHash.insert( stackedTileId, new StackedTile( tile ) );
+    } else {
+        d->m_tileCache.insert( stackedTileId, new StackedTile( tile ), tile.numBytes() );
+    }
+
+    if ( d->m_tilesOnDisplay.contains( stackedTileId ) ) {
+        emit tileUpdateAvailable( stackedTileId );
+    }
 }
 
 void StackedTileLoader::clear()
@@ -348,8 +316,8 @@ void StackedTileLoader::clear()
     for ( int row = 0; row < tileRowCount( 0 ); ++row ) {
         for ( int column = 0; column < tileColumnCount( 0 ); ++column ) {
             TileId const id = TileId( 0, 0, column, row );
-            const StackedTile *const levelZeroTile = d->createTile( id );
-            d->m_levelZeroHash.insert( id, levelZeroTile );
+            StackedTile tile( d->m_layerDecorator->createTile( id, d->findRelevantTextureLayers( id ) ) );
+            insert( id, tile );
         }
     }
 }

@@ -140,6 +140,8 @@ class StackedTileLoader : public QObject
 
         void update();
 
+        void insert( TileId const & tileId, StackedTile const & tile );
+
     Q_SIGNALS:
         /**
          * This signal is emitted whenever a requested tile has been
