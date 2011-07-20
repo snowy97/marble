@@ -293,6 +293,9 @@ void StackedTileLoader::update()
 
 void StackedTileLoader::updateTile( TileId const &tileId, QImage const &tileImage )
 {
+    if ( tileImage.isNull() )
+        return;
+
     d->detectMaxTileLevel();
 
     const TileId stackedTileId( 0, tileId.zoomLevel(), tileId.x(), tileId.y() );
@@ -301,12 +304,14 @@ void StackedTileLoader::updateTile( TileId const &tileId, QImage const &tileImag
         const StackedTile *displayedTile = ( stackedTileId.zoomLevel() == 0 ? d->m_levelZeroHash.take( stackedTileId )
                                                                             : d->m_tileCache.take( stackedTileId ) );
 
-        QVector<QSharedPointer<TextureTile> > tiles = ( displayedTile != 0 ? displayedTile->tiles()
-                                                                           : QVector<QSharedPointer<TextureTile> >() );
-        delete displayedTile;
-        displayedTile = 0;
+        if ( displayedTile == 0 || displayedTile->tiles().isEmpty() ) {
+            delete displayedTile;
+            displayedTile = d->createTile( stackedTileId );
+        } else {
+            QVector<QSharedPointer<TextureTile> > tiles = displayedTile->tiles();
+            delete displayedTile;
+            displayedTile = 0;
 
-        if ( !tiles.isEmpty() && !tileImage.isNull() ) {
             for ( int i = 0; i < tiles.count(); ++ i) {
                 if ( tiles[i]->id() == tileId ) {
                     const Blending *blending = tiles[i]->blending();
@@ -316,8 +321,6 @@ void StackedTileLoader::updateTile( TileId const &tileId, QImage const &tileImag
 
             const QImage resultImage = d->m_layerDecorator->merge( stackedTileId, tiles );
             displayedTile = new StackedTile( stackedTileId, resultImage, tiles );
-        } else {
-            displayedTile = d->createTile( stackedTileId );
         }
 
         if ( stackedTileId.zoomLevel() == 0 ) {
