@@ -29,6 +29,7 @@
 #include "GeoSceneSettings.h"
 #include "MarbleDebug.h"
 #include "MarbleDirs.h"
+#include "MergedLayerDecorator.h"
 #include "StackedTile.h"
 #include "StackedTileLoader.h"
 #include "TextureColorizer.h"
@@ -53,6 +54,7 @@ public:
 public:
     TextureLayer  *const m_parent;
     TileLoader m_loader;
+    MergedLayerDecorator m_layerDecorator;
     StackedTileLoader    m_tileLoader;
     QCache<TileId, QPixmap> m_pixmapCache;
     TextureMapperInterface *m_texmapper;
@@ -63,7 +65,8 @@ public:
 TextureLayer::Private::Private( MapThemeManager *mapThemeManager, HttpDownloadManager *downloadManager, SunLocator *sunLocator, TextureLayer *parent )
     : m_parent( parent )
     , m_loader( downloadManager, mapThemeManager )
-    , m_tileLoader( &m_loader, sunLocator )
+    , m_layerDecorator( &m_loader, sunLocator )
+    , m_tileLoader( &m_loader, &m_layerDecorator )
     , m_pixmapCache( 100 )
     , m_texmapper( 0 )
     , m_texcolorizer( 0 )
@@ -97,6 +100,7 @@ void TextureLayer::Private::updateTextureLayers()
             result.append( candidate );
     }
 
+    m_layerDecorator.setThemeId( "maps/" + m_mapTheme->head()->mapThemeId() );
     m_tileLoader.setTextureLayers( result );
     m_pixmapCache.clear();
 }
@@ -206,7 +210,7 @@ void TextureLayer::paintGlobe( GeoPainter *painter,
 
 void TextureLayer::setShowTileId( bool show )
 {
-    d->m_tileLoader.setShowTileId( show );
+    d->m_layerDecorator.setShowTileId( show );
 }
 
 void TextureLayer::setTextureColorizer( TextureColorizer *texcolorizer )
