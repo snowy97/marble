@@ -14,8 +14,6 @@
 #define MARBLE_STACKEDTILE_H
 
 #include <QtCore/QSharedDataPointer>
-#include <QtCore/QSharedPointer>
-#include <QtCore/QVector>
 #include <QtGui/QColor>
 
 #include "global.h"
@@ -26,7 +24,6 @@ namespace Marble
 {
 
 class StackedTilePrivate;
-class TextureTile;
 class TileId;
 
 /*!
@@ -61,7 +58,7 @@ class StackedTile
  public:
     StackedTile();
     StackedTile( const StackedTile &other );
-    explicit StackedTile( TileId const &id, QImage const &resultImage, QVector<QSharedPointer<TextureTile> > const &tiles );
+    explicit StackedTile( TileId const &id, QImage const &resultImage );
     ~StackedTile();
 
     StackedTile &operator=( const StackedTile &other );
@@ -75,12 +72,6 @@ class StackedTile
     bool isNull() const;
     int depth() const;
     int numBytes() const;
-
-/*!
-    \brief Returns the stack of TextureTiles
-    \return A container of TextureTile objects.
-*/
-    QVector<QSharedPointer<TextureTile> > tiles() const;
 
 /*!
     \brief Returns the QImage that describes the merged stack of TextureTiles

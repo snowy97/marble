@@ -16,13 +16,12 @@
 #ifndef MARBLE_MERGEDLAYERDECORATOR_H
 #define MARBLE_MERGEDLAYERDECORATOR_H
 
-#include <QtCore/QObject>
 #include <QtCore/QMutex>
-#include <QtCore/QSharedPointer>
 #include <QtCore/QVector>
 #include <QtGui/QImage>
 
 #include "StackedTile.h"
+#include "TextureTile.h"
 #include "TileId.h"
 #include "global.h"
 
@@ -37,28 +36,19 @@ class SunLocator;
 class TextureTile;
 class TileLoader;
 
-class MergedLayerDecorator : public QObject
+class MergedLayerDecorator
 {
-    Q_OBJECT
-
  public:
     MergedLayerDecorator( TileLoader * const tileLoader, SunLocator* sunLocator );
     virtual ~MergedLayerDecorator();
 
-    StackedTile createTile( const TileId &stackedTileId, const QVector<const GeoSceneTexture *> &textureLayers );
+    QVector<TextureTile> createTile( const TileId &stackedTileId, const QVector<const GeoSceneTexture *> &textureLayers );
+    StackedTile merge( const TileId &id, const QVector<TextureTile> &tiles );
 
     void setThemeId( const QString &themeId );
     void setShowTileId(bool show);
 
- public Q_SLOTS:
-    void requestMerge( const QVector<QSharedPointer<TextureTile> > &tiles );
-    void requestTile( const TileId &stackedTileId, const QVector<const GeoSceneTexture *> &textureLayers );
-
- Q_SIGNALS:
-    void tileFinished( const TileId &id, const StackedTile &tile );
-
  private:
-    StackedTile merge( const TileId &id, const QVector<QSharedPointer<TextureTile> > &tiles );
     QImage loadDataset( const TileId &id );
     int maxDivisor( int maximum, int fullLength );
 

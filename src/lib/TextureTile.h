@@ -55,6 +55,7 @@ class Blending;
 class TextureTile
 {
  public:
+    TextureTile();
     TextureTile( TileId const & tileId, QImage const & image, const Blending * blending );
     ~TextureTile();
 
@@ -80,11 +81,9 @@ class TextureTile
     int byteCount() const;
 
  private:
-    Q_DISABLE_COPY( TextureTile )
-
-    TileId const m_id;
-    Blending const * const m_blending;
-    QImage const m_image;
+    TileId m_id;
+    Blending const * m_blending;
+    QImage m_image;
 };
 
 

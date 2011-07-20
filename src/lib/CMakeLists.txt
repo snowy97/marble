@@ -143,6 +143,7 @@ set(marblewidget_SRCS
     StackedTile.cpp
     TileId.cpp
     StackedTileLoader.cpp
+    StackedTileLoaderThread.cpp
     TileLoaderHelper.cpp
     TileCreator.cpp
     TinyWebBrowser.cpp

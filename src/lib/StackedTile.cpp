@@ -63,22 +63,20 @@ StackedTilePrivate::StackedTilePrivate() :
     m_resultTile(),
     m_depth( m_resultTile.depth() ),
     m_isGrayscale( m_resultTile.isGrayscale() ),
-    m_tiles(),
     jumpTable8( 0 ),
     jumpTable32( 0 ),
-    m_byteCount( calcByteCount( m_resultTile, m_tiles ) )
+    m_byteCount( m_resultTile.byteCount() )
 {
 }
 
-StackedTilePrivate::StackedTilePrivate( const TileId &id, const QImage &resultImage, QVector<QSharedPointer<TextureTile> > const &tiles ) :
+StackedTilePrivate::StackedTilePrivate( const TileId &id, const QImage &resultImage ) :
       m_id( id ), 
       m_resultTile( resultImage ),
       m_depth( resultImage.depth() ),
       m_isGrayscale( resultImage.isGrayscale() ),
-      m_tiles( tiles ),
       jumpTable8( jumpTableFromQImage8( m_resultTile ) ),
       jumpTable32( jumpTableFromQImage32( m_resultTile ) ),
-      m_byteCount( calcByteCount( resultImage, tiles ) )
+      m_byteCount( resultImage.byteCount() )
 {
 }
 
@@ -220,18 +218,6 @@ uint StackedTilePrivate::pixelF( qreal x, qreal y, const QRgb& topLeftValue ) co
     return topLeftValue;
 }
 
-int StackedTilePrivate::calcByteCount( const QImage &resultImage, const QVector<QSharedPointer<TextureTile> > &tiles )
-{
-    int byteCount = resultImage.numBytes();
-
-    QVector<QSharedPointer<TextureTile> >::const_iterator pos = tiles.constBegin();
-    QVector<QSharedPointer<TextureTile> >::const_iterator const end = tiles.constEnd();
-    for (; pos != end; ++pos )
-        byteCount += (*pos)->byteCount();
-
-    return byteCount;
-}
-
 
 const StackedTile StackedTile::null( new StackedTilePrivate() );
 
@@ -245,11 +231,9 @@ StackedTile::StackedTile( const StackedTile &other )
 {
 }
 
-StackedTile::StackedTile( TileId const &id, QImage const &resultImage, QVector<QSharedPointer<TextureTile> > const &tiles )
-    : d( new StackedTilePrivate( id, resultImage, tiles ) )
+StackedTile::StackedTile( TileId const &id, QImage const &resultImage )
+    : d( new StackedTilePrivate( id, resultImage ) )
 {
-    Q_ASSERT( !tiles.isEmpty() );
-
     if ( d->m_resultTile.isNull() ) {
         qWarning() << "An essential tile is missing. Please rerun the application.";
         return;
@@ -314,11 +298,6 @@ int StackedTile::depth() const
 int StackedTile::numBytes() const
 {
     return d->m_byteCount;
-}
-
-QVector<QSharedPointer<TextureTile> > StackedTile::tiles() const
-{
-    return d->m_tiles;
 }
 
 QImage const * StackedTile::resultTile() const

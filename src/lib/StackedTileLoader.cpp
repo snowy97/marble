@@ -27,6 +27,7 @@
 #include "MarbleDebug.h"
 #include "MergedLayerDecorator.h"
 #include "StackedTile.h"
+#include "StackedTileLoaderThread.h"
 #include "TextureTile.h"
 #include "TileLoader.h"
 #include "TileLoaderHelper.h"
@@ -35,6 +36,7 @@
 #include <QtCore/QCache>
 #include <QtCore/QDateTime>
 #include <QtCore/QHash>
+#include <QtCore/QMetaType>
 #include <QtCore/QReadWriteLock>
 #include <QtCore/QSet>
 #include <QtGui/QImage>
@@ -50,6 +52,7 @@ public:
                               MergedLayerDecorator *layerDecorator )
         : m_tileLoader( tileLoader ),
           m_layerDecorator( layerDecorator ),
+          m_thread( layerDecorator ),
           m_maxTileLevel( 0 )
     {
         m_tileCache.setMaxCost( 20000 * 1024 ); // Cache size measured in bytes
@@ -61,11 +64,13 @@ public:
 
     TileLoader *const m_tileLoader;
     MergedLayerDecorator *const m_layerDecorator;
+    StackedTileLoaderThread m_thread;
     int         m_maxTileLevel;
     QVector<GeoSceneTexture const *> m_textureLayers;
     QHash <TileId, const StackedTile*> m_tilesOnDisplay;
     QHash <TileId, const StackedTile*> m_levelZeroHash;
     QCache <TileId, const StackedTile>  m_tileCache;
+    QHash <TileId, QVector<TextureTile> > m_tilePyramid;
     QReadWriteLock m_cacheLock;
 };
 
@@ -73,8 +78,13 @@ StackedTileLoader::StackedTileLoader( TileLoader *tileLoader,
                                       MergedLayerDecorator *layerDecorator )
     : d( new StackedTileLoaderPrivate( tileLoader, layerDecorator ) )
 {
-    connect( d->m_layerDecorator, SIGNAL( tileFinished( const TileId &, const StackedTile & ) ),
-             this, SLOT( insert( const TileId &, const StackedTile & ) ) );
+    qRegisterMetaType<TileId>( "TileId" );
+    qRegisterMetaType<StackedTile>( "StackedTile" );
+    qRegisterMetaType<QVector<TextureTile> >( "QVector<TextureTile>" );
+
+    connect( &d->m_thread, SIGNAL( tileFinished( const TileId &, const StackedTile &, const QVector<TextureTile> & ) ),
+             this, SLOT( insert( const TileId &, const StackedTile &, const QVector<TextureTile> & ) ),
+             Qt::QueuedConnection );
 }
 
 StackedTileLoader::~StackedTileLoader()
@@ -128,11 +138,28 @@ QSize StackedTileLoader::tileSize() const
 
 void StackedTileLoader::resetTilehash()
 {
+    d->m_thread.clear();
     d->m_tilesOnDisplay.clear();
 }
 
 void StackedTileLoader::cleanupTilehash()
 {
+    const QHash<TileId, QVector<TextureTile> > oldPyramid = d->m_tilePyramid;
+    d->m_tilePyramid.clear();
+
+    foreach ( TileId const & stackedTileId, d->m_tilesOnDisplay.keys() ) {
+        for ( int tileLevel = stackedTileId.zoomLevel(); tileLevel > 0; --tileLevel ) {
+            const int levDiff = stackedTileId.zoomLevel() - tileLevel;
+            const TileId id = TileId( 0, tileLevel, stackedTileId.x() >> levDiff, stackedTileId.y() >> levDiff );
+            d->m_tilePyramid.insert( id, oldPyramid.value( id ) );
+        }
+    }
+
+    foreach ( TileId const & id, d->m_tilePyramid.keys() ) {
+            if ( !d->m_tileCache.contains( id ) ) {
+                d->m_thread.requestTile( id, d->findRelevantTextureLayers( id ), id.zoomLevel() == d->m_tilesOnDisplay.begin().key().zoomLevel() );
+            }
+    }
 }
 
 const StackedTile* StackedTileLoader::loadTile( TileId const & stackedTileId )
@@ -240,21 +267,6 @@ void StackedTileLoader::setVolatileCacheLimit( quint64 kiloBytes )
 
 void StackedTileLoader::update()
 {
-    QSet<TileId> requiredTiles;
-
-    foreach ( TileId const & stackedTileId, d->m_tilesOnDisplay.keys() ) {
-        for ( int tileLevel = stackedTileId.zoomLevel(); tileLevel > 0; --tileLevel ) {
-            const int levDiff = stackedTileId.zoomLevel() - tileLevel;
-            const TileId id = TileId( 0, tileLevel, stackedTileId.x() >> levDiff, stackedTileId.y() >> levDiff );
-            requiredTiles.insert( id );
-        }
-    }
-
-    foreach ( TileId const & id, requiredTiles ) {
-            if ( !d->m_tileCache.contains( id ) ) {
-                d->m_layerDecorator->requestTile( id, d->findRelevantTextureLayers( id ) );
-            }
-    }
 }
 
 void StackedTileLoader::updateTile( TileId const &tileId, QImage const &tileImage )
@@ -266,32 +278,29 @@ void StackedTileLoader::updateTile( TileId const &tileId, QImage const &tileImag
 
     const TileId stackedTileId( 0, tileId.zoomLevel(), tileId.x(), tileId.y() );
 
-    if ( !d->m_tilesOnDisplay.contains( stackedTileId ) ) {
+    if ( !d->m_tilePyramid.contains( stackedTileId ) ) {
         d->m_tileCache.remove( stackedTileId );
         return;
     }
 
-    const StackedTile *const displayedTile = ( stackedTileId.zoomLevel() == 0 ? d->m_levelZeroHash.value( stackedTileId, 0 )
-                                                                              : d->m_tileCache.object( stackedTileId ) );
+    QVector<TextureTile> tiles = d->m_tilePyramid.value( stackedTileId );
 
-    if ( displayedTile == 0 || displayedTile->tiles().isEmpty() ) {
-        d->m_layerDecorator->requestTile( stackedTileId, d->findRelevantTextureLayers( stackedTileId ) );
-    } else {
-        QVector<QSharedPointer<TextureTile> > tiles = displayedTile->tiles();
-
-        for ( int i = 0; i < tiles.count(); ++ i) {
-            if ( tiles[i]->id() == tileId ) {
-                const Blending *blending = tiles[i]->blending();
-                tiles[i] = QSharedPointer<TextureTile>( new TextureTile( tileId, tileImage, blending ) );
-            }
+    for ( int i = 0; i < tiles.count(); ++ i) {
+        if ( tiles[i].id() == tileId ) {
+            const Blending *blending = tiles[i].blending();
+            tiles[i] = TextureTile( tileId, tileImage, blending );
         }
-
-        d->m_layerDecorator->requestMerge( tiles );
     }
+
+    d->m_tilePyramid.insert( stackedTileId, tiles );
+
+    d->m_thread.requestMerge( tiles, tileId.zoomLevel() == d->m_tilesOnDisplay.begin().key().zoomLevel() );
 }
 
-void StackedTileLoader::insert( TileId const & stackedTileId, StackedTile const & tile )
+void StackedTileLoader::insert( TileId const & stackedTileId, StackedTile const & tile, QVector<TextureTile> const & tiles )
 {
+    d->m_tilePyramid.insert( stackedTileId, tiles );
+
     if ( stackedTileId.zoomLevel() == 0 ) {
         delete d->m_levelZeroHash.value( stackedTileId, 0 );
         d->m_levelZeroHash.insert( stackedTileId, new StackedTile( tile ) );
@@ -316,8 +325,9 @@ void StackedTileLoader::clear()
     for ( int row = 0; row < tileRowCount( 0 ); ++row ) {
         for ( int column = 0; column < tileColumnCount( 0 ); ++column ) {
             TileId const id = TileId( 0, 0, column, row );
-            StackedTile tile( d->m_layerDecorator->createTile( id, d->findRelevantTextureLayers( id ) ) );
-            insert( id, tile );
+            const QVector<TextureTile> tiles = d->m_layerDecorator->createTile( id, d->findRelevantTextureLayers( id ) );
+            const StackedTile tile = d->m_layerDecorator->merge( id, tiles );
+            insert( id, tile, tiles );
         }
     }
 }

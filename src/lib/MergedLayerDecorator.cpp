@@ -37,6 +37,7 @@
 
 #include <QtCore/QMutexLocker>
 #include <QtCore/QPointer>
+#include <QtCore/QRunnable>
 #include <QtGui/QPainter>
 
 using namespace Marble;
@@ -96,7 +97,7 @@ MergedLayerDecorator::~MergedLayerDecorator()
     delete m_cityLightsTheme;
 }
 
-StackedTile MergedLayerDecorator::merge( const TileId &id, const QVector<QSharedPointer<TextureTile> > &tiles )
+StackedTile MergedLayerDecorator::merge( const TileId &id, const QVector<TextureTile> &tiles )
 {
     Q_ASSERT( !tiles.isEmpty() );
 
@@ -105,19 +106,19 @@ StackedTile MergedLayerDecorator::merge( const TileId &id, const QVector<QShared
     // if there are more than one active texture layers, we have to convert the
     // result tile into QImage::Format_ARGB32_Premultiplied to make blending possible
     const bool withConversion = tiles.count() > 1;
-    foreach ( const QSharedPointer<TextureTile> &tile, tiles ) {
-            const Blending *const blending = tile->blending();
+    foreach ( const TextureTile &tile, tiles ) {
+            const Blending *const blending = tile.blending();
             if ( blending ) {
                 mDebug() << "StackedTile::initResultTile: blending";
-                blending->blend( &resultImage, tile.data() );
+                blending->blend( &resultImage, &tile );
             }
             else {
                 mDebug() << "StackedTile::initResultTile: "
                     "no blending defined => copying top over bottom image";
                 if ( withConversion ) {
-                    resultImage = tile->image()->convertToFormat( QImage::Format_ARGB32_Premultiplied );
+                    resultImage = tile.image()->convertToFormat( QImage::Format_ARGB32_Premultiplied );
                 } else {
-                    resultImage = tile->image()->copy();
+                    resultImage = tile.image()->copy();
                 }
             }
     }
@@ -139,17 +140,14 @@ StackedTile MergedLayerDecorator::merge( const TileId &id, const QVector<QShared
         paintTileId( &resultImage, id );
     }
 
-    StackedTile tile = StackedTile( id, resultImage, tiles );
+    StackedTile tile = StackedTile( id, resultImage );
 
     return tile;
 }
 
-StackedTile MergedLayerDecorator::createTile( const TileId &stackedTileId, const QVector<const GeoSceneTexture *> &textureLayers )
+QVector<TextureTile> MergedLayerDecorator::createTile( const TileId &stackedTileId, const QVector<const GeoSceneTexture *> &textureLayers )
 {
-    if ( textureLayers.isEmpty() )
-        return StackedTile::null;
-
-    QVector<QSharedPointer<TextureTile> > tiles;
+    QVector<TextureTile> tiles;
     QVector<GeoSceneTexture const *>::const_iterator pos = textureLayers.constBegin();
     QVector<GeoSceneTexture const *>::const_iterator const end = textureLayers.constEnd();
     for (; pos != end; ++pos ) {
@@ -159,14 +157,11 @@ StackedTile MergedLayerDecorator::createTile( const TileId &stackedTileId, const
         mDebug() << "StackedTileLoader::loadTile: tile" << textureLayer->sourceDir()
                  << tileId.toString() << textureLayer->tileSize();
         const QImage tileImage = m_tileLoader->loadTile( tileId, DownloadBrowse );
-        QSharedPointer<TextureTile> tile( new TextureTile( tileId, tileImage, textureLayer->blending() ) );
+        const TextureTile tile = TextureTile( tileId, tileImage, textureLayer->blending() );
         tiles.append( tile );
     }
-    Q_ASSERT( !tiles.isEmpty() );
 
-    const StackedTile tile = merge( stackedTileId, tiles );
-
-    return tile;
+    return tiles;
 }
 
 void MergedLayerDecorator::setThemeId( const QString &themeId )
@@ -177,28 +172,6 @@ void MergedLayerDecorator::setThemeId( const QString &themeId )
 void MergedLayerDecorator::setShowTileId( bool visible )
 {
     m_showTileId = visible;
-}
-
-void MergedLayerDecorator::requestTile(const TileId &stackedTileId, const QVector<const GeoSceneTexture *> &textureLayers)
-{
-    StackedTile tile = createTile( stackedTileId, textureLayers );
-
-    emit tileFinished( stackedTileId, tile );
-}
-
-void MergedLayerDecorator::requestMerge( const QVector<QSharedPointer<TextureTile> > &tiles )
-{
-    if ( tiles.isEmpty() )
-        return;
-
-    const TileId id = TileId( 0,
-                              tiles.first()->id().zoomLevel(),
-                              tiles.first()->id().x(),
-                              tiles.first()->id().y() );
-
-    StackedTile tile = merge( id, tiles );
-
-    emit tileFinished( id, tile );
 }
 
 QImage MergedLayerDecorator::loadDataset( const TileId &id )
@@ -464,5 +437,3 @@ int MergedLayerDecorator::maxDivisor( int maximum, int fullLength )
     }
     return best;
 }
-
-#include "MergedLayerDecorator.moc"

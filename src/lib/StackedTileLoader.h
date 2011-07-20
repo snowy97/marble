@@ -25,6 +25,7 @@
 #define MARBLE_STACKEDTILELOADER_H
 
 #include <QtCore/QObject>
+#include <QtCore/QSharedPointer>
 #include <QtCore/QSize>
 #include <QtCore/QVector>
 #include <QtGui/QImage>
@@ -41,6 +42,7 @@ namespace Marble
 
 class MergedLayerDecorator;
 class StackedTile;
+class TextureTile;
 class TileLoader;
 
 class StackedTileLoaderPrivate;
@@ -140,7 +142,7 @@ class StackedTileLoader : public QObject
 
         void update();
 
-        void insert( TileId const & tileId, StackedTile const & tile );
+        void insert( TileId const & tileId, StackedTile const & tile, QVector<TextureTile> const & tiles );
 
     Q_SIGNALS:
         /**

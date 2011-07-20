@@ -22,6 +22,13 @@
 namespace Marble
 {
 
+TextureTile::TextureTile()
+    : m_id(),
+      m_blending( 0 ),
+      m_image()
+{
+}
+
 TextureTile::TextureTile( TileId const & tileId, QImage const & image, const Blending * blending )
     : m_id( tileId ),
       m_blending( blending ),
