@@ -225,7 +225,7 @@ class MARBLE_EXPORT MarbleModel : public QObject
 
     MarbleClock *clock();
     const MarbleClock *clock() const;
-    SunLocator*           sunLocator()     const;
+    const SunLocator *sunLocator() const;
 
     /**
      * @brief  Returns the limit in kilobytes of the persistent (on hard disc) tile cache.

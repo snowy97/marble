@@ -437,7 +437,7 @@ const MarbleClock *MarbleModel::clock() const
     return d->m_clock;
 }
 
-SunLocator* MarbleModel::sunLocator() const
+const SunLocator *MarbleModel::sunLocator() const
 {
     return d->m_sunLocator;
 }

@@ -56,7 +56,6 @@ public:
           m_lon( 0.0 ),
           m_lat( 0.0 ),
           m_clock( clock ),
-          m_centered( false ),
           m_planet( planet )
     {
     }
@@ -70,7 +69,6 @@ public:
     qreal m_lat;
 
     const MarbleClock *const m_clock;
-    bool m_centered;
     const Planet *m_planet;
 };
 
@@ -241,23 +239,7 @@ void SunLocatorPrivate::update()
 
     emit q->updateSun();
 
-    if ( m_centered ) {
-        emit q->centerSun( q->getLon(), q->getLat() );
-    }
-}
-
-void SunLocator::setCentered(bool centered)
-{
-    if ( centered == d->m_centered ) {
-        return;
-    }
-
-    mDebug() << "SunLocator::setCentered";
-    mDebug() << "sunLocator =" << this;
-    d->m_centered = centered;
-    if ( d->m_centered ) {
-        emit centerSun( getLon(), getLat() );
-    }
+    emit q->centerSun( q->getLon(), q->getLat() );
 }
 
 void SunLocator::setPlanet( const Planet *planet )
@@ -282,11 +264,6 @@ void SunLocator::setPlanet( const Planet *planet )
     if ( !previousPlanet->id().isEmpty() ) {
         emit updateSun();
     }
-}
-
-bool SunLocator::getCentered() const
-{
-    return d->m_centered;
 }
 
 qreal SunLocator::getLon() const
