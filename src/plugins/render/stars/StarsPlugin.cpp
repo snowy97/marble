@@ -13,6 +13,7 @@
 #include <QtCore/QRectF>
 #include <QtCore/QSize>
 #include <QtCore/QDateTime>
+#include "MarbleClock.h"
 #include "MarbleDebug.h"
 #include "MarbleDirs.h"
 #include "MarbleModel.h"
@@ -24,8 +25,7 @@ namespace Marble
 {
 
 StarsPlugin::StarsPlugin()
-    : m_isInitialized( false ),
-      m_starsLoaded( false )
+    : m_starsLoaded( false )
 {
 }
 
@@ -73,12 +73,16 @@ QIcon StarsPlugin::icon () const
 
 void StarsPlugin::initialize ()
 {
-    m_isInitialized = true;
 }
 
 bool StarsPlugin::isInitialized () const
 {
-    return m_isInitialized;
+    return true;
+}
+
+void StarsPlugin::requestRepaint()
+{
+    emit repaintNeeded( QRegion() );
 }
 
 void StarsPlugin::loadStars() {
@@ -157,6 +161,9 @@ bool StarsPlugin::render( GeoPainter *painter, ViewportParams *viewport,
 
         if ( !viewport->globeCoversViewport() && viewport->projection() == Spherical )
         {
+            connect( marbleModel()->clock(), SIGNAL( timeChanged() ),
+                     this, SLOT( requestRepaint() ), Qt::UniqueConnection );
+
             // Delayed initialization:
             // Load the star database only if the sky is actually being painted...
             if ( !m_starsLoaded ) {
@@ -212,6 +219,9 @@ bool StarsPlugin::render( GeoPainter *painter, ViewportParams *viewport,
                 else size = 0.5;
                 painter->drawEllipse( QRectF( x, y, size, size ) );
             }
+        } else {
+            disconnect( marbleModel()->clock(), SIGNAL( timeChanged() ),
+                       this, SLOT( requestRepaint() ) );
         }
 
         painter->restore();

@@ -243,9 +243,6 @@ void MarbleWidgetPrivate::construct()
                        m_widget, SLOT( creatingTilesStart( TileCreator*, const QString&,
                                                            const QString& ) ) );
 
-    m_widget->connect( m_model->sunLocator(), SIGNAL( updateStars() ),
-                       m_widget, SLOT( update() ) );
-
     m_widget->connect( m_model->sunLocator(), SIGNAL( centerSun( qreal, qreal ) ),
                        m_widget, SLOT( centerOn( qreal, qreal ) ) );
 

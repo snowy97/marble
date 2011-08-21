@@ -243,10 +243,7 @@ void SunLocatorPrivate::update()
 
     if ( m_centered ) {
         emit q->centerSun( q->getLon(), q->getLat() );
-        return;
     }
-
-    emit q->updateStars();
 }
 
 void SunLocator::setCentered(bool centered)
