@@ -51,14 +51,20 @@ const int update_interval = 60000;
 class SunLocatorPrivate
 {
 public:
-    SunLocatorPrivate( const MarbleClock *clock, const Planet *planet )
-        : m_lon( 0.0 ),
+    SunLocatorPrivate( const MarbleClock *clock, const Planet *planet, SunLocator *parent )
+        : q( parent ),
+          m_lon( 0.0 ),
           m_lat( 0.0 ),
           m_clock( clock ),
           m_centered( false ),
           m_planet( planet )
     {
     }
+
+    void update();
+    void updatePosition();
+
+    SunLocator *const q;
 
     qreal m_lon;
     qreal m_lat;
@@ -71,8 +77,10 @@ public:
 
 SunLocator::SunLocator( const MarbleClock *clock, const Planet *planet )
   : QObject(),
-    d( new SunLocatorPrivate( clock, planet ))
+    d( new SunLocatorPrivate( clock, planet, this ) )
 {
+    connect( clock, SIGNAL( timeChanged() ),
+             this,  SLOT( update() ) );
 }
 
 SunLocator::~SunLocator()
@@ -80,11 +88,11 @@ SunLocator::~SunLocator()
     delete d;
 }
 
-void SunLocator::updatePosition()
+void SunLocatorPrivate::updatePosition()
 {
-    if( d->m_planet->id() == "moon" ) {
+    if( m_planet->id() == "moon" ) {
         // days since the first full moon of the 20th century
-        qreal days = (qreal)d->m_clock->dateTime().date().toJulianDay() + d->m_clock->dayFraction() - MOON_EPOCH;
+        qreal days = (qreal)m_clock->dateTime().date().toJulianDay() + m_clock->dayFraction() - MOON_EPOCH;
 
         // number of orbits the moon has made (relative to the sun as observed from earth)
         days /= MOON_SYNODIC_PERIOD;
@@ -99,49 +107,49 @@ void SunLocator::updatePosition()
         mDebug() << "MOON:" << (int)(days*100) << "% of orbit completed and"
                  << (int)(abs((days-0.5)*2) * 100) << "% illuminated";
 
-        d->m_lon = (1-days) * 2*M_PI;
+        m_lon = (1-days) * 2*M_PI;
 
         // not necessarily accurate but close enough
         // (only differs by about +-6 degrees of this value)
-        d->m_lat = 0.0;
+        m_lat = 0.0;
         return;
     }
 
     // find current Julian day number relative to epoch J2000
-    long day = d->m_clock->dateTime().date().toJulianDay() - J2000;
+    long day = m_clock->dateTime().date().toJulianDay() - J2000;
 
     // from http://www.astro.uu.nl/~strous/AA/en/reken/zonpositie.html
     // mean anomaly
-    qreal M = d->m_planet->M_0() + d->m_planet->M_1()*day;
+    qreal M = m_planet->M_0() + m_planet->M_1()*day;
 
     // equation of center
-    qreal C = d->m_planet->C_1()*sin(M) + d->m_planet->C_2()*sin(2*M)
-            + d->m_planet->C_3()*sin(3*M) + d->m_planet->C_4()*sin(4*M)
-            + d->m_planet->C_5()*sin(5*M) + d->m_planet->C_6()*sin(6*M);
+    qreal C = m_planet->C_1()*sin(  M) + m_planet->C_2()*sin(2*M)
+            + m_planet->C_3()*sin(3*M) + m_planet->C_4()*sin(4*M)
+            + m_planet->C_5()*sin(5*M) + m_planet->C_6()*sin(6*M);
 
     // true anomaly
     qreal nu = M + C;
 
     // ecliptic longitude of sun as seen from planet
-    qreal lambda_sun = nu + d->m_planet->Pi() + M_PI;
+    qreal lambda_sun = nu + m_planet->Pi() + M_PI;
 
     // declination of sun as seen from planet
-    qreal delta_sun = asin(sin(d->m_planet->epsilon())*sin(lambda_sun));
+    qreal delta_sun = asin(sin(m_planet->epsilon())*sin(lambda_sun));
 
     // right ascension of sun as seen from planet
-    qreal alpha_sun = atan2(cos(d->m_planet->epsilon())*sin(lambda_sun), cos(lambda_sun));
+    qreal alpha_sun = atan2(cos(m_planet->epsilon())*sin(lambda_sun), cos(lambda_sun));
 
     // solar noon occurs when sidereal time is equal to alpha_sun
     qreal theta = alpha_sun;
 
     // convert sidereal time to geographic longitude
-    d->m_lon = M_PI - (d->m_planet->theta_0() + d->m_planet->theta_1()
-                       * (day + d->m_clock->dayFraction()) - theta);
+    m_lon = M_PI - (m_planet->theta_0() + m_planet->theta_1()
+                    * (day + m_clock->dayFraction()) - theta);
 
-    while(d->m_lon < 0)
-        d->m_lon += 2*M_PI;
+    while(m_lon < 0)
+        m_lon += 2*M_PI;
 
-    d->m_lat = delta_sun;
+    m_lat = delta_sun;
 }
 
 
@@ -227,18 +235,18 @@ void SunLocator::shadePixelComposite(QRgb& pixcol, const QRgb& dpixcol,
     }
 }
 
-void SunLocator::update()
+void SunLocatorPrivate::update()
 {
     updatePosition();
 
-    emit updateSun();
+    emit q->updateSun();
 
-    if ( d->m_centered ) {
-        emit centerSun( getLon(), getLat() );
+    if ( m_centered ) {
+        emit q->centerSun( q->getLon(), q->getLat() );
         return;
     }
 
-    emit updateStars();
+    emit q->updateStars();
 }
 
 void SunLocator::setCentered(bool centered)
@@ -269,7 +277,7 @@ void SunLocator::setPlanet( const Planet *planet )
 
     mDebug() << "SunLocator::setPlanet(Planet*)";
     d->m_planet = planet;
-    updatePosition();
+    d->updatePosition();
 
     // Initially there might be no planet set.
     // In that case we don't want an update.

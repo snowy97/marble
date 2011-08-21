@@ -194,8 +194,6 @@ MarbleModel::MarbleModel( QObject *parent )
 
     d->m_routingManager = new RoutingManager( d->m_parent, this );
 
-    connect(d->m_clock,   SIGNAL( timeChanged() ),
-            d->m_sunLocator, SLOT( update() ) );
      //Initializing Bookmark manager
     d->m_bookmarkManager = new BookmarkManager();
 }
