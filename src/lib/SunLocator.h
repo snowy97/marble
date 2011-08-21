@@ -48,8 +48,7 @@ class MARBLE_EXPORT SunLocator : public QObject
     qreal getLat() const;
 
  Q_SIGNALS:
-    void updateSun();
-    void centerSun( qreal lon, qreal lat );
+    void positionChanged( qreal lon, qreal lat );
 
  private:
     Q_PRIVATE_SLOT( d, void update() )

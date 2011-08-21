@@ -1076,7 +1076,7 @@ void MarbleMap::setShowCityLights( bool visible )
 
 void MarbleMap::setShowSunInZenith( bool visible )
 {
-    disconnect( d->m_model->sunLocator(), SIGNAL( centerSun( qreal, qreal ) ),
+    disconnect( d->m_model->sunLocator(), SIGNAL( positionChanged( qreal, qreal ) ),
                 this,                     SLOT( centerOn( qreal, qreal ) ) );
 
     QList<RenderPlugin *> pluginList = renderPlugins();
@@ -1089,7 +1089,7 @@ void MarbleMap::setShowSunInZenith( bool visible )
     }
 
     if ( showSunInZenith() ) {
-        connect( d->m_model->sunLocator(), SIGNAL( centerSun( qreal, qreal ) ),
+        connect( d->m_model->sunLocator(), SIGNAL( positionChanged( qreal, qreal ) ),
                  this,                     SLOT( centerOn( qreal, qreal ) ) );
     } else if ( visible ) {
         mDebug() << "Ignoring centering on sun, since the sun plugin is not loaded.";
