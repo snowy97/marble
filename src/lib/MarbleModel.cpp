@@ -271,7 +271,7 @@ void MarbleModel::setMapTheme( GeoSceneDocument* mapTheme )
     if( d->m_mapTheme->head()->target().toLower() != d->m_planet->id() ) {
         mDebug() << "Changing Planet";
         *(d->m_planet) = Planet( d->m_mapTheme->head()->target().toLower() );
-        sunLocator()->setPlanet(d->m_planet);
+        d->m_sunLocator->setPlanet(d->m_planet);
     }
 
     // find the list of previous theme's geodata
