@@ -178,12 +178,14 @@ void ScanlineTextureMapperContext::pixelValueApproxF( const qreal lon, const qre
                     || posY >= tileHeight
                     || posY < 0.0 )
                 {
+                    if ( posY < 0 ) { qDebug() << "above" << posY << (int)posY; }
                     nextTile( posX, posY );
                     itLon = prevPixelX + m_toTileCoordinatesLon;
                     itLat = prevPixelY + m_toTileCoordinatesLat;
                     posX = qMax<qreal>( 0.0, qMin<qreal>( tileWidth-1.0, itLon + itStepLon * j ) );
                     posY = qMax<qreal>( 0.0, qMin<qreal>( tileHeight-1.0, itLat + itStepLat * j ) );
                     oldPosX = -1;
+                    if ( posY >= tileWidth ) { qDebug() << prevPixelY << m_toTileCoordinatesLat << itLat << itStepLat << j; }
                 }
 
             *scanLine = m_tile->pixel( ( (int)posX + m_vTileStartX ) >> m_deltaLevel,
