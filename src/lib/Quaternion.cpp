@@ -54,10 +54,7 @@ void Quaternion::getSpherical(qreal &lon, qreal &lat) const
 
     lat = asin( y );
 
-    if(v[Q_X] * v[Q_X] + v[Q_Z] * v[Q_Z] > 0.00005) 
-        lon = atan2(v[Q_X], v[Q_Z]);
-    else
-        lon = 0.0;
+    lon = atan2(v[Q_X], v[Q_Z]);
 }
 
 void Quaternion::normalize() 

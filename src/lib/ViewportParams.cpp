@@ -233,11 +233,11 @@ bool ViewportParams::setPlanetAxis(const Quaternion &newAxis)
 
     if ( !currentProjection()->traversablePoles() && fabs( newAxis.pitch() ) > maxLat ) {
 
-        qreal centerLon, centerLat;
-        centerCoordinates( centerLon, centerLat );
+        Quaternion  qpos( 0, 0, 0, 1 );
+        qpos.rotateAroundAxis( newAxis );
 
-        // Normalize latitude and longitude
-        GeoDataPoint::normalizeLat( centerLat );
+        qreal centerLon, centerLat;
+        qpos.getSpherical( centerLon, centerLat );
 
         // Checking whether the latitude is valid:
         if ( fabs( centerLat ) > maxLat )
@@ -245,8 +245,8 @@ bool ViewportParams::setPlanetAxis(const Quaternion &newAxis)
             valid = false;
             centerLat = maxLat * centerLat / fabs( centerLat );
         }
-        
-        d->m_planetAxis.createFromEuler( -centerLat, centerLon, newAxis.roll() );
+
+        d->m_planetAxis.createFromEuler( -centerLat, centerLon, 0 );
     }
     else {
         d->m_planetAxis = newAxis;
@@ -310,13 +310,9 @@ void ViewportParams::setSize(QSize newSize)
 void ViewportParams::centerCoordinates( qreal &centerLon, qreal &centerLat ) const
 {
     // Calculate translation of center point
-    centerLat = - d->m_planetAxis.pitch();
-    if ( centerLat > M_PI )
-        centerLat -= 2 * M_PI;
-
-    centerLon = + d->m_planetAxis.yaw();
-    if ( centerLon > M_PI )
-        centerLon -= 2 * M_PI;
+    Quaternion  qpos( 0, 0, 0, 1 );
+    qpos.rotateAroundAxis( d->m_planetAxis );
+    qpos.getSpherical( centerLon, centerLat );
 }
 
 GeoDataLatLonAltBox ViewportParams::viewLatLonAltBox() const
