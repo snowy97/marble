@@ -45,7 +45,7 @@ Quaternion Quaternion::fromSpherical(qreal lon, qreal lat)
     return Quaternion( w, x, y, z );
 }
 
-void Quaternion::getSpherical(qreal &lon, qreal &lat) const 
+qreal Quaternion::sphericalLat() const
 {
     qreal  y = v[Q_Y];
     if ( y > 1.0 )
@@ -53,12 +53,17 @@ void Quaternion::getSpherical(qreal &lon, qreal &lat) const
     else if ( y < -1.0 )
         y = -1.0;
 
-    lat = asin( y );
+    const qreal lat = asin( y );
 
+    return lat;
+}
+
+qreal Quaternion::sphericalLon() const
+{
     if(v[Q_X] * v[Q_X] + v[Q_Z] * v[Q_Z] > 0.00005) 
-        lon = atan2(v[Q_X], v[Q_Z]);
-    else
-        lon = 0.0;
+        return atan2(v[Q_X], v[Q_Z]);
+
+    return 0.0;
 }
 
 void Quaternion::normalize() 

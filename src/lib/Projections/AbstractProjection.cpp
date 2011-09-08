@@ -795,7 +795,8 @@ QPolygonF AbstractProjectionPrivate::processTessellation(  const GeoDataCoordina
             // To tessellate along great circles use the 
             // normalized linear interpolation ("NLERP") for latitude and longitude.
             itpos.nlerp( previousCoords.quaternion(), currentCoords.quaternion(), t );
-            itpos. getSpherical( lon, lat );
+            lon = itpos.sphericalLon();
+            lat = itpos.sphericalLat();
         }
 
         q->screenCoordinates( GeoDataCoordinates( lon, lat, altitude ), viewport, x, y, globeHidesPoint );
@@ -880,7 +881,8 @@ GeoDataCoordinates AbstractProjectionPrivate::findHorizon( const GeoDataCoordina
         // normalized linear interpolation ("NLERP") for latitude and longitude.
         Quaternion  itpos;
         itpos.nlerp( previousCoords.quaternion(), currentCoords.quaternion(), 0.5 );
-        itpos. getSpherical( lon, lat );
+        lon = itpos.sphericalLon();
+        lat = itpos.sphericalLat();
     }
 
     qreal altitude = previousCoords.altitude() + 0.5 * altDiff;

@@ -199,7 +199,8 @@ bool SphericalProjection::geoCoordinates( const int x, const int y,
 
     Quaternion  qpos( 0.0, qx, qy, qz );
     qpos.rotateAroundAxis( viewport->planetAxis() );
-    qpos.getSpherical( lon, lat );
+    lon = qpos.sphericalLon();
+    lat = qpos.sphericalLat();
 
     if ( unit == GeoDataCoordinates::Degree ) {
         lon *= RAD2DEG;

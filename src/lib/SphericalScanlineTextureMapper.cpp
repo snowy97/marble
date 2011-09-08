@@ -175,8 +175,6 @@ void SphericalScanlineTextureMapper::RenderJob::run()
     // initialize needed variables that are modified during texture mapping:
 
     ScanlineTextureMapperContext context( m_tileLoader, m_tileLevel );
-    qreal  lon = 0.0;
-    qreal  lat = 0.0;
 
 
     // Scanline based algorithm to texture map a sphere
@@ -264,7 +262,8 @@ void SphericalScanlineTextureMapper::RenderJob::run()
             Quaternion qpos( 0.0, qx, qy, qz );
             qpos.rotateAroundAxis( planetAxisMatrix );
 
-            qpos.getSpherical( lon, lat );
+            const qreal lon = qpos.sphericalLon();
+            const qreal lat = qpos.sphericalLat();
 //            mDebug() << QString("lon: %1 lat: %2").arg(lon).arg(lat);
             // Approx for n-1 out of n pixels within the boundary of
             // xIpLeft to xIpRight

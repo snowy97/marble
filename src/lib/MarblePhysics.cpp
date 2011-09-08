@@ -56,7 +56,8 @@ public:
         // Spherical interpolation for current position between source position
         // and target position. We can't use Nlerp here, as the "t-velocity" needs to be constant.
         itpos.slerp( sourcePosition.quaternion(), targetPosition.quaternion(), t );
-        itpos.getSpherical( lon, lat );
+        lon = itpos.sphericalLon();
+        lat = itpos.sphericalLat();
     }
 
     qreal totalDistance() const

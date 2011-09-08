@@ -60,7 +60,8 @@ class MARBLE_EXPORT Quaternion
     Quaternion& operator*=(const Quaternion &q);
     Quaternion& operator*=(qreal);
 
-    void        getSpherical(qreal &lon, qreal &lat) const;
+    qreal       sphericalLon() const;
+    qreal       sphericalLat() const;
 
     void        normalize();
 

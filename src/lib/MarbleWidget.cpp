@@ -617,8 +617,8 @@ void MarbleWidget::rotateBy( const qreal deltaLon, const qreal deltaLat, FlyToMo
     Quaternion  rotTheta( 1.0, 0.0, deltaLon / 180.0, 0.0 );
 
     Quaternion  axis = d->m_map.viewport()->planetAxis();
-    qreal lon( 0.0 ), lat( 0.0 );
-    axis.getSpherical( lon, lat );
+    qreal lon = axis.sphericalLon();
+    qreal lat = axis.sphericalLat();
     axis = rotTheta * axis;
     axis *= rotPhi;
     axis.normalize();
