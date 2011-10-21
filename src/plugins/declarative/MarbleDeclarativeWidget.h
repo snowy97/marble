@@ -11,12 +11,15 @@
 #ifndef DECLARATIVE_MARBLE_WIDGET_H
 #define DECLARATIVE_MARBLE_WIDGET_H
 
+#include "MarbleModel.h"
+#include "MarbleMap.h"
+
 #include "Tracking.h"
 #include "Routing.h"
 #include "Search.h"
 #include "Coordinate.h"
 
-#include <QtGui/QGraphicsProxyWidget>
+#include <QtDeclarative/QDeclarativeItem>
 #include <QtCore/QList>
 #include <QtCore/QPoint>
 
@@ -24,7 +27,6 @@ namespace Marble
 {
 // Forward declaration
 class MarbleModel;
-class MarbleWidget;
 class RenderPlugin;
 class ViewportParams;
 
@@ -40,7 +42,7 @@ class ZoomButtonInterceptor;
   * displayed in QML when it is the only widget. For performance reasons it would be
   * nice to avoid this.
   */
-class MarbleWidget : public QGraphicsProxyWidget
+class MarbleWidget : public QDeclarativeItem
 {
     Q_OBJECT
 
@@ -61,7 +63,9 @@ class MarbleWidget : public QGraphicsProxyWidget
 
 public:
     /** Constructor */
-    explicit MarbleWidget( QGraphicsItem *parent = 0, Qt::WindowFlags flags = 0 );
+    explicit MarbleWidget( QDeclarativeItem *parent = 0 );
+
+    void paint( QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget = 0 );
 
     Marble::MarbleModel *model();
 
@@ -182,8 +186,8 @@ private Q_SLOTS:
     void forwardMouseClick( qreal lon, qreal lat, GeoDataCoordinates::Unit );
 
 private:
-    /** Wrapped MarbleWidget */
-    Marble::MarbleWidget* m_marbleWidget;
+    MarbleModel m_model;
+    MarbleMap m_map;
 
     bool m_inputEnabled;
 
