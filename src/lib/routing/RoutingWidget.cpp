@@ -143,7 +143,7 @@ void RoutingWidgetPrivate::adjustSearchButton()
 void RoutingWidgetPrivate::setActiveInput( RoutingInputWidget *widget )
 {
     Q_ASSERT( widget && "Must not pass null" );
-    MarblePlacemarkModel *model = widget->searchResultModel();
+    QAbstractItemModel *model = widget->searchResultModel();
 
     m_activeInput = widget;
     m_ui.directionsListView->setModel( model );
@@ -312,7 +312,7 @@ void RoutingWidget::activateItem ( const QModelIndex &index )
 void RoutingWidget::handleSearchResult( RoutingInputWidget *widget )
 {
     d->setActiveInput( widget );
-    MarblePlacemarkModel *model = widget->searchResultModel();
+    QAbstractItemModel *model = widget->searchResultModel();
 
     if ( model->rowCount() ) {
         QString const results = tr( "%n placemarks found", "", model->rowCount() );

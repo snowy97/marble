@@ -87,7 +87,7 @@ public:
 
     RoutingModel *m_routingModel;
 
-    MarblePlacemarkModel *m_placemarkModel;
+    QAbstractItemModel *m_placemarkModel;
 
     QItemSelectionModel *m_selectionModel;
 
@@ -754,7 +754,7 @@ bool RoutingLayer::eventFilter( QObject *obj, QEvent *event )
     return false;
 }
 
-void RoutingLayer::setPlacemarkModel ( MarblePlacemarkModel *model )
+void RoutingLayer::setPlacemarkModel( QAbstractItemModel *model )
 {
     d->m_placemarkModel = model;
     setViewportChanged();

@@ -323,7 +323,7 @@ void RoutingInputWidget::findPlacemarks()
     }
 }
 
-MarblePlacemarkModel *RoutingInputWidget::searchResultModel()
+QAbstractItemModel *RoutingInputWidget::searchResultModel()
 {
     return d->m_placemarkModel;
 }

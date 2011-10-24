@@ -19,6 +19,7 @@
 #include <QtGui/QItemSelection>
 
 class QAbstractProxyModel;
+class QAbstractItemModel;
 class QComboBox;
 
 namespace Marble
@@ -26,7 +27,6 @@ namespace Marble
 
 class MarbleWidget;
 class RoutingModel;
-class MarblePlacemarkModel;
 class RoutingLayerPrivate;
 class RouteRequest;
 class AlternativeRoutesModel;
@@ -75,7 +75,7 @@ public:
     /**
       * Set the placemark model to use. Implicitly removes the routing model.
       */
-    void setPlacemarkModel ( MarblePlacemarkModel *model );
+    void setPlacemarkModel( QAbstractItemModel *model );
 
     /**
       * When enabled, a cross hair cursor is shown in the map and each click

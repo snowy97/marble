@@ -24,7 +24,6 @@ namespace Marble
 {
 
 class RoutingInputWidgetPrivate;
-class MarblePlacemarkModel;
 class RouteRequest;
 class PluginManager;
 class MarbleWidget;
@@ -63,7 +62,7 @@ public:
     /**
       * Returns the placemark model that contains search results
       */
-    MarblePlacemarkModel *searchResultModel();
+    QAbstractItemModel *searchResultModel();
 
     /**
       * Returns false iff the input text is empty
