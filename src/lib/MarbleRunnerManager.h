@@ -82,7 +82,7 @@ signals:
       * @todo FIXME: this sounds like a duplication of QAbstractItemModel signals
       */
     void searchResultChanged( QAbstractItemModel *model );
-    void searchResultChanged( QVector<GeoDataPlacemark*> result );
+    void searchResultChanged( const GeoDataDocument &result );
 
     /**
       * The search request for the given search term has finished, i.e. all

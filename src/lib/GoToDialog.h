@@ -21,7 +21,7 @@ class QModelIndex;
 namespace Marble
 {
 
-class GeoDataPlacemark;
+class GeoDataDocument;
 class GoToDialogPrivate;
 class MarbleWidget;
 
@@ -55,7 +55,7 @@ public:
 
     Q_PRIVATE_SLOT( d, void startSearch() )
 
-    Q_PRIVATE_SLOT( d, void updateSearchResult( QVector<GeoDataPlacemark*> placemarks ) )
+    Q_PRIVATE_SLOT( d, void updateSearchResult( const GeoDataDocument &placemarks ) )
 
     Q_PRIVATE_SLOT( d, void updateSearchMode() )
 

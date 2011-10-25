@@ -29,7 +29,7 @@ namespace Marble
 class NavigationWidgetPrivate;
 
 class MarbleWidget;
-class GeoDataPlacemark;
+class GeoDataDocument;
 
 class MARBLE_EXPORT NavigationWidget : public QWidget
 {
@@ -92,7 +92,7 @@ class MARBLE_EXPORT NavigationWidget : public QWidget
      * them.
      * @see centerOn
      */
-    void setLocations( QVector<GeoDataPlacemark*> locations );
+    void setLocations( const GeoDataDocument &locations );
 
     void selectTheme( const QString & );
 

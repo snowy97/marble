@@ -25,6 +25,8 @@
 #include "GeoSceneDocument.h"
 #include "GeoSceneHead.h"
 
+#include "kdescendantsproxymodel.h"
+
 // Qt
 #include <QtCore/QTime>
 #include <QtCore/QTimer>
@@ -47,14 +49,17 @@ class NavigationWidgetPrivate
     MarbleRunnerManager    *m_runnerManager;
     QTimer                  m_deferSearch;
     GeoDataTreeModel        m_treeModel;
-    GeoDataDocument        *m_document;
+    KDescendantsProxyModel  m_model;
+    GeoDataDocument        *const m_document;
 
     NavigationWidgetPrivate()
-        : m_document( new GeoDataDocument ) {
-    m_document->setDocumentRole( SearchResultDocument );
-    m_document->setName("Search Results");
-    m_treeModel.setRootDocument( m_document );
-    };
+        : m_document( new GeoDataDocument )
+    {
+        m_document->setDocumentRole( SearchResultDocument );
+        m_document->setName("Search Results");
+        m_treeModel.setRootDocument( m_document );
+        m_model.setSourceModel( &m_treeModel );
+    }
 
 };
 
@@ -116,8 +121,8 @@ NavigationWidget::~NavigationWidget()
 void NavigationWidget::setMarbleWidget( MarbleWidget *widget )
 {
     d->m_runnerManager = new MarbleRunnerManager( widget->model()->pluginManager(), this );
-    connect( d->m_runnerManager, SIGNAL( searchResultChanged( QVector<GeoDataPlacemark*> ) ),
-             this,               SLOT( setLocations( QVector<GeoDataPlacemark*> ) ) );
+    connect( d->m_runnerManager, SIGNAL( searchResultChanged( const GeoDataDocument & ) ),
+             this,               SLOT( setLocations( const GeoDataDocument & ) ) );
 
     d->m_widget = widget;
     d->m_runnerManager->setModel( widget->model() );
@@ -204,7 +209,7 @@ void NavigationWidget::search()
         d->m_navigationUi.locationListView->activate();
 }
 
-void NavigationWidget::setLocations( QVector<GeoDataPlacemark*> locations )
+void NavigationWidget::setLocations( const GeoDataDocument &locations )
 {
     QTime t;
     t.start();
@@ -212,15 +217,12 @@ void NavigationWidget::setLocations( QVector<GeoDataPlacemark*> locations )
     // fill the local document with results
     d->m_widget->model()->placemarkSelectionModel()->clear();
     d->m_widget->model()->treeModel()->removeDocument( d->m_document );
-    d->m_document->clear();
-    foreach (GeoDataPlacemark *placemark, locations ) {
-        d->m_document->append( new GeoDataPlacemark( *placemark ) );
-    }
+    *d->m_document = locations;
     d->m_widget->model()->treeModel()->addDocument( d->m_document );
     d->m_widget->centerOn( d->m_document->latLonAltBox() );
 
     // set the proxy list to the list of results
-    d->m_sortproxy->setSourceModel( &d->m_treeModel );
+    d->m_sortproxy->setSourceModel( &d->m_model );
     d->m_sortproxy->sort( 0 );
     mDebug() << "NavigationWidget (sort): Time elapsed:"<< t.elapsed() << " ms";
 }

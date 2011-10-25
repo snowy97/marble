@@ -24,6 +24,8 @@
 #include "routing/RoutingManager.h"
 #include "routing/RouteRequest.h"
 
+#include "kdescendantsproxymodel.h"
+
 #include <QtCore/QAbstractListModel>
 #include <QtCore/QTimer>
 #include <QtGui/QPushButton>
@@ -81,9 +83,11 @@ public:
 
     MarbleRunnerManager* m_runnerManager;
 
-    GeoDataDocument *m_searchResult;
+    GeoDataDocument *const m_searchResult;
 
     GeoDataTreeModel m_searchResultModel;
+
+    KDescendantsProxyModel m_searchResultProxyModel;
 
     QTimer m_progressTimer;
 
@@ -99,7 +103,7 @@ public:
 
     void startSearch();
 
-    void updateSearchResult( QVector<GeoDataPlacemark*> placemarks );
+    void updateSearchResult( const GeoDataDocument &placemarks );
 
     void updateSearchMode();
 
@@ -306,8 +310,14 @@ void GoToDialogPrivate::createProgressAnimation()
 }
 
 GoToDialogPrivate::GoToDialogPrivate( GoToDialog* parent, MarbleWidget* marbleWidget ) :
-    m_parent( parent), m_marbleWidget( marbleWidget ), m_targetModel( marbleWidget ),
-    m_runnerManager( 0 ), m_searchResult( new GeoDataDocument ), m_currentFrame( 0 )
+    m_parent( parent),
+    m_marbleWidget( marbleWidget ),
+    m_targetModel( marbleWidget ),
+    m_runnerManager( 0 ),
+    m_searchResult( new GeoDataDocument ),
+    m_searchResultModel(),
+    m_searchResultProxyModel(),
+    m_currentFrame( 0 )
 {
     setupUi( parent );
 
@@ -339,8 +349,8 @@ void GoToDialogPrivate::startSearch()
     if ( !m_runnerManager ) {
         m_runnerManager = new MarbleRunnerManager( m_marbleWidget->model()->pluginManager(), m_parent );
         m_runnerManager->setModel( m_marbleWidget->model() );
-        QObject::connect( m_runnerManager, SIGNAL( searchResultChanged( QVector<GeoDataPlacemark*> ) ),
-                          m_parent, SLOT( updateSearchResult( QVector<GeoDataPlacemark*> ) ) );
+        QObject::connect( m_runnerManager, SIGNAL( searchResultChanged( const GeoDataDocument & ) ),
+                          m_parent, SLOT( updateSearchResult( const GeoDataDocument & ) ) );
         QObject::connect( m_runnerManager, SIGNAL( searchFinished( QString ) ),
                           m_parent, SLOT( stopProgressAnimation() ) );
     }
@@ -355,16 +365,13 @@ void GoToDialogPrivate::startSearch()
     updateResultMessage( 0 );
 }
 
-void GoToDialogPrivate::updateSearchResult( QVector<GeoDataPlacemark*> placemarks )
+void GoToDialogPrivate::updateSearchResult( const GeoDataDocument &placemarks )
 {
     m_searchResultModel.setRootDocument( 0 );
-    m_searchResult->clear();
-    foreach (GeoDataPlacemark *placemark, placemarks) {
-        m_searchResult->append( new GeoDataPlacemark( *placemark ) );
-    }
+    *m_searchResult = placemarks;
     m_searchResultModel.setRootDocument( m_searchResult );
-    bookmarkListView->setModel( &m_searchResultModel );
-    updateResultMessage( m_searchResultModel.rowCount() );
+    bookmarkListView->setModel( &m_searchResultProxyModel );
+    updateResultMessage( m_searchResultProxyModel.rowCount() );
 }
 
 GoToDialog::GoToDialog( MarbleWidget* marbleWidget, QWidget * parent, Qt::WindowFlags flags ) :
@@ -380,6 +387,7 @@ GoToDialog::GoToDialog( MarbleWidget* marbleWidget, QWidget * parent, Qt::Window
 #endif
 
     d->m_searchResultModel.setRootDocument( d->m_searchResult );
+    d->m_searchResultProxyModel.setSourceModel( &d->m_searchResultModel );
     d->bookmarkListView->setModel( &d->m_targetModel );
     connect( d->bookmarkListView, SIGNAL( activated( QModelIndex ) ),
              this, SLOT( saveSelection ( QModelIndex ) ) );
@@ -430,7 +438,7 @@ void GoToDialogPrivate::updateSearchMode()
     descriptionLabel->setVisible( searchEnabled );
     progressButton->setVisible( searchEnabled && m_progressTimer.isActive() );
     if ( searchEnabled ) {
-        bookmarkListView->setModel( &m_searchResultModel );
+        bookmarkListView->setModel( &m_searchResultProxyModel );
     } else {
         bookmarkListView->setModel( &m_targetModel );
     }

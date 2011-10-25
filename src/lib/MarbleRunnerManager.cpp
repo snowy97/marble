@@ -11,7 +11,7 @@
 
 #include "MarbleRunnerManager.h"
 
-#include "MarblePlacemarkModel.h"
+#include "GeoDataTreeModel.h"
 #include "MarbleDebug.h"
 #include "MarbleModel.h"
 #include "Planet.h"
@@ -22,6 +22,8 @@
 #include "RunnerTask.h"
 #include "routing/RouteRequest.h"
 #include "routing/RoutingProfilesModel.h"
+
+#include "kdescendantsproxymodel.h"
 
 #include <QtCore/QObject>
 #include <QtCore/QString>
@@ -41,8 +43,9 @@ public:
     QString m_lastSearchTerm;
     QMutex m_modelMutex;
     MarbleModel * m_marbleModel;
-    MarblePlacemarkModel *m_model;
-    QVector<GeoDataPlacemark*> m_placemarkContainer;
+    GeoDataDocument *const m_placemarkContainer;
+    GeoDataTreeModel m_treeModel;
+    KDescendantsProxyModel m_model;
     QVector<GeoDataDocument*> m_routingResult;
     QList<GeoDataCoordinates> m_reverseGeocodingResults;
     const PluginManager* m_pluginManager;
@@ -64,10 +67,12 @@ public:
 MarbleRunnerManagerPrivate::MarbleRunnerManagerPrivate( MarbleRunnerManager* parent, const PluginManager* pluginManager ) :
         q( parent ),
         m_marbleModel( 0 ),
-        m_model( new MarblePlacemarkModel( parent ) ),
+        m_placemarkContainer( new GeoDataDocument ),
+        m_model(),
         m_pluginManager( pluginManager )
 {
-    m_model->setPlacemarkContainer( &m_placemarkContainer );
+    m_treeModel.setRootDocument( m_placemarkContainer );
+    m_model.setSourceModel( &m_treeModel );
     qRegisterMetaType<GeoDataPlacemark>( "GeoDataPlacemark" );
     qRegisterMetaType<GeoDataCoordinates>( "GeoDataCoordinates" );
     qRegisterMetaType<QVector<GeoDataPlacemark*> >( "QVector<GeoDataPlacemark*>" );
@@ -159,8 +164,8 @@ void MarbleRunnerManager::reverseGeocoding( const GeoDataCoordinates &coordinate
 void MarbleRunnerManager::findPlacemarks( const QString &searchTerm )
 {
     if ( searchTerm == d->m_lastSearchTerm ) {
-      emit searchResultChanged( d->m_model );
-      emit searchResultChanged( d->m_placemarkContainer );
+      emit searchResultChanged( &d->m_model );
+      emit searchResultChanged( *d->m_placemarkContainer );
       emit searchFinished( searchTerm );
       return;
     }
@@ -170,11 +175,12 @@ void MarbleRunnerManager::findPlacemarks( const QString &searchTerm )
     d->m_searchTasks.clear();
 
     d->m_modelMutex.lock();
-    d->m_model->removePlacemarks( "MarbleRunnerManager", 0, d->m_placemarkContainer.size() );
-    qDeleteAll( d->m_placemarkContainer );
-    d->m_placemarkContainer.clear();
+    d->m_treeModel.setRootDocument( d->m_placemarkContainer );
+    d->m_placemarkContainer->clear();
+    d->m_treeModel.setRootDocument( d->m_placemarkContainer );
     d->m_modelMutex.unlock();
-    emit searchResultChanged( d->m_model );
+    emit searchResultChanged( *d->m_placemarkContainer );
+    emit searchResultChanged( &d->m_model );
 
     if ( searchTerm.trimmed().isEmpty() ) {
         emit searchFinished( searchTerm );
@@ -202,12 +208,14 @@ void MarbleRunnerManager::addSearchResult( QVector<GeoDataPlacemark*> result )
         return;
 
     d->m_modelMutex.lock();
-    int start = d->m_placemarkContainer.size();
-    d->m_placemarkContainer << result;
-    d->m_model->addPlacemarks( start, result.size() );
+    d->m_treeModel.setRootDocument( d->m_placemarkContainer );
+    foreach ( GeoDataPlacemark *placemark, result ) {
+        d->m_placemarkContainer->append( placemark );
+    }
+    d->m_treeModel.setRootDocument( d->m_placemarkContainer );
     d->m_modelMutex.unlock();
-    emit searchResultChanged( d->m_model );
-    emit searchResultChanged( d->m_placemarkContainer );
+    emit searchResultChanged( &d->m_model );
+    emit searchResultChanged( *d->m_placemarkContainer );
 }
 
 void MarbleRunnerManager::setModel( MarbleModel * model )
