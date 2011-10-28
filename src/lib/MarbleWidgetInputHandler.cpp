@@ -351,9 +351,9 @@ MarbleWidgetDefaultInputHandler::~MarbleWidgetDefaultInputHandler()
 
 void MarbleWidgetDefaultInputHandler::lmbTimeout()
 {
-    if (!d->m_selectionRubber.isVisible()) {
-        emit lmbRequest( d->m_leftPressedX, d->m_leftPressedY );
-    }
+    Q_ASSERT( !d->m_selectionRubber.isVisible() ); // m_lmbTimer should have been stopped when m_selectionRubber became visible
+
+    emit lmbRequest( d->m_leftPressedX, d->m_leftPressedY );
 }
 
 void MarbleWidgetInputHandler::restoreViewContext()
