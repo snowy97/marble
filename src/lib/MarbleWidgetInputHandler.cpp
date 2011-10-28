@@ -400,6 +400,8 @@ void MarbleWidgetDefaultInputHandler::openItemToolTip()
 
 bool MarbleWidgetDefaultInputHandler::eventFilter( QObject* o, QEvent* e )
 {
+    Q_UNUSED( o )
+
     if (e->type() == QEvent::MouseButtonDblClick)
     {
         d->m_lmbTimer.stop();
@@ -408,7 +410,36 @@ bool MarbleWidgetDefaultInputHandler::eventFilter( QObject* o, QEvent* e )
         MarbleWidgetInputHandler::d->m_mouseWheelTimer->start( 400 );
     }
 
-    if ( keyEvent( MarbleWidgetInputHandler::d->m_widget, e ) ) {
+    if ( e->type() == QEvent::KeyPress ) {
+        QKeyEvent const * const k = dynamic_cast<QKeyEvent const * const>( e );
+        Q_ASSERT( k );
+
+        switch ( k->key() ) {
+        case Qt::Key_Left:
+            MarbleWidgetInputHandler::d->m_widget->moveLeft();
+            break;
+        case Qt::Key_Up:
+            MarbleWidgetInputHandler::d->m_widget->moveUp();
+            break;
+        case Qt::Key_Right:
+            MarbleWidgetInputHandler::d->m_widget->moveRight();
+            break;
+        case Qt::Key_Down:
+            MarbleWidgetInputHandler::d->m_widget->moveDown();
+            break;
+        case Qt::Key_Plus:
+            MarbleWidgetInputHandler::d->m_widget->zoomIn();
+            break;
+        case Qt::Key_Minus:
+            MarbleWidgetInputHandler::d->m_widget->zoomOut();
+            break;
+        case Qt::Key_Home:
+            MarbleWidgetInputHandler::d->m_widget->goHome();
+            break;
+        default:
+            break;
+        }
+
         return true;
     }
 
@@ -708,109 +739,70 @@ bool MarbleWidgetDefaultInputHandler::eventFilter( QObject* o, QEvent* e )
         // moving the window around when we don't handle the event. See bug 242414.
         return event->type() != QEvent::MouseMove;
     }
-    else {
-        if ( e->type() == QEvent::Wheel ) {
 
-            QWheelEvent *wheelevt = static_cast<QWheelEvent*>( e );
+    else if ( e->type() == QEvent::Wheel ) {
+
+        QWheelEvent *wheelevt = static_cast<QWheelEvent*>( e );
+
+        MarbleWidget *marbleWidget = MarbleWidgetInputHandler::d->m_widget;
+        marbleWidget->setViewContext( Animation );
+
+        int steps = wheelevt->delta() / 3;
+        qreal zoom = marbleWidget->zoom();
+        qreal target = MarbleWidgetInputHandler::d->m_wheelZoomTargetDistance;
+        if ( marbleWidget->animationsEnabled() && target > 0.0 ) {
+            // Do not use intermediate (interpolated) distance values caused by animations
+            zoom = marbleWidget->zoomFromDistance( target );
+        }
+        qreal newDistance = marbleWidget->distanceFromZoom( zoom + steps );
+        MarbleWidgetInputHandler::d->m_wheelZoomTargetDistance = newDistance;
+        d->ZoomAt(MarbleWidgetInputHandler::d->m_widget, wheelevt->pos(), newDistance);
+
+        MarbleWidgetInputHandler::d->m_mouseWheelTimer->start( 400 );
+        return true;
+    }
+
+    else if ( e->type() == QEvent::Gesture ) {
+        QGestureEvent *ge = static_cast<QGestureEvent *>(e);
+        QPinchGesture *pinch = static_cast<QPinchGesture*>(ge->gesture(Qt::PinchGesture));
+        if (pinch) {
+            qreal scaleFactor = pinch->scaleFactor();
+            qreal  destLat;
+            qreal  destLon;
+            QPointF center = pinch->centerPoint();
 
             MarbleWidget *marbleWidget = MarbleWidgetInputHandler::d->m_widget;
-            marbleWidget->setViewContext( Animation );
 
-            int steps = wheelevt->delta() / 3;
-            qreal zoom = marbleWidget->zoom();
-            qreal target = MarbleWidgetInputHandler::d->m_wheelZoomTargetDistance;
-            if ( marbleWidget->animationsEnabled() && target > 0.0 ) {
-                // Do not use intermediate (interpolated) distance values caused by animations
-                zoom = marbleWidget->zoomFromDistance( target );
+            bool isValid = marbleWidget->geoCoordinates(center.x(), center.y(),
+                         destLon, destLat, GeoDataCoordinates::Radian );
+
+            if (isValid) {
+                marbleWidget->viewport()->setFocusPoint(GeoDataCoordinates(destLon, destLat));
             }
-            qreal newDistance = marbleWidget->distanceFromZoom( zoom + steps );
-            MarbleWidgetInputHandler::d->m_wheelZoomTargetDistance = newDistance;
-            d->ZoomAt(MarbleWidgetInputHandler::d->m_widget, wheelevt->pos(), newDistance);
 
-            MarbleWidgetInputHandler::d->m_mouseWheelTimer->start( 400 );
+            switch ( pinch->state() ) {
+            case Qt::NoGesture:
+                break;
+            case Qt::GestureStarted:
+                marbleWidget->setViewContext( Animation );
+                d->m_startingRadius = marbleWidget->radius();
+                break;
+            case Qt::GestureUpdated:
+                marbleWidget->setRadius( marbleWidget->radius() * scaleFactor );
+                break;
+            case Qt::GestureFinished:
+                marbleWidget->viewport()->resetFocusPoint();
+                marbleWidget->setViewContext( Still );
+                break;
+            case Qt::GestureCanceled:
+                marbleWidget->setRadius( d->m_startingRadius );
+                marbleWidget->viewport()->resetFocusPoint();
+                marbleWidget->setViewContext( Still );
+                break;
+            }
+
             return true;
         }
-        else if ( e->type() == QEvent::Gesture ) {
-            QGestureEvent *ge = static_cast<QGestureEvent *>(e);
-            QPinchGesture *pinch = static_cast<QPinchGesture*>(ge->gesture(Qt::PinchGesture));
-            if (pinch) {
-                qreal scaleFactor = pinch->scaleFactor();
-                qreal  destLat;
-                qreal  destLon;
-                QPointF center = pinch->centerPoint();
-
-                MarbleWidget *marbleWidget = MarbleWidgetInputHandler::d->m_widget;
-
-                bool isValid = marbleWidget->geoCoordinates(center.x(), center.y(),
-                             destLon, destLat, GeoDataCoordinates::Radian );
-
-                if (isValid) {
-                    marbleWidget->viewport()->setFocusPoint(GeoDataCoordinates(destLon, destLat));
-                }
-
-                switch ( pinch->state() ) {
-                case Qt::NoGesture:
-                    break;
-                case Qt::GestureStarted:
-                    marbleWidget->setViewContext( Animation );
-                    d->m_startingRadius = marbleWidget->radius();
-                    break;
-                case Qt::GestureUpdated:
-                    marbleWidget->setRadius( marbleWidget->radius() * scaleFactor );
-                    break;
-                case Qt::GestureFinished:
-                    marbleWidget->viewport()->resetFocusPoint();
-                    marbleWidget->setViewContext( Still );
-                    break;
-                case Qt::GestureCanceled:
-                    marbleWidget->setRadius( d->m_startingRadius );
-                    marbleWidget->viewport()->resetFocusPoint();
-                    marbleWidget->setViewContext( Still );
-                    break;
-                }
-
-                return true;
-            }
-        }
-        else
-            return false;
-    }
-    return QObject::eventFilter( o, e );
-}
-
-bool MarbleWidgetDefaultInputHandler::keyEvent( MarbleWidget * widget, QEvent* e )
-{
-    if ( e->type() == QEvent::KeyPress ) {
-        QKeyEvent const * const k = dynamic_cast<QKeyEvent const * const>( e );
-        Q_ASSERT( k );
-
-        switch ( k->key() ) {
-        case Qt::Key_Left:
-            widget->moveLeft();
-            break;
-        case Qt::Key_Up:
-            widget->moveUp();
-            break;
-        case Qt::Key_Right:
-            widget->moveRight();
-            break;
-        case Qt::Key_Down:
-            widget->moveDown();
-            break;
-        case Qt::Key_Plus:
-            widget->zoomIn();
-            break;
-        case Qt::Key_Minus:
-            widget->zoomOut();
-            break;
-        case Qt::Key_Home:
-            widget->goHome();
-            break;
-        default:
-            break;
-        }
-
-        return true;
     }
 
     return false;

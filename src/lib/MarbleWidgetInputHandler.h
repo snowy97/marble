@@ -92,8 +92,6 @@ class MARBLE_EXPORT MarbleWidgetDefaultInputHandler  : public MarbleWidgetInputH
     MarbleWidgetDefaultInputHandler( MarbleWidget* );
     ~MarbleWidgetDefaultInputHandler();
 
-    static bool keyEvent( MarbleWidget * widget, QEvent* e );
-
  protected:
     bool eventFilter( QObject *, QEvent * );
 
