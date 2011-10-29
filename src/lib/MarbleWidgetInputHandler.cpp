@@ -740,28 +740,6 @@ bool MarbleWidgetDefaultInputHandler::eventFilter( QObject* o, QEvent* e )
         return event->type() != QEvent::MouseMove;
     }
 
-    else if ( e->type() == QEvent::Wheel ) {
-
-        QWheelEvent *wheelevt = static_cast<QWheelEvent*>( e );
-
-        MarbleWidget *marbleWidget = MarbleWidgetInputHandler::d->m_widget;
-        marbleWidget->setViewContext( Animation );
-
-        int steps = wheelevt->delta() / 3;
-        qreal zoom = marbleWidget->zoom();
-        qreal target = MarbleWidgetInputHandler::d->m_wheelZoomTargetDistance;
-        if ( marbleWidget->animationsEnabled() && target > 0.0 ) {
-            // Do not use intermediate (interpolated) distance values caused by animations
-            zoom = marbleWidget->zoomFromDistance( target );
-        }
-        qreal newDistance = marbleWidget->distanceFromZoom( zoom + steps );
-        MarbleWidgetInputHandler::d->m_wheelZoomTargetDistance = newDistance;
-        d->ZoomAt(MarbleWidgetInputHandler::d->m_widget, wheelevt->pos(), newDistance);
-
-        MarbleWidgetInputHandler::d->m_mouseWheelTimer->start( 400 );
-        return true;
-    }
-
     else if ( e->type() == QEvent::Gesture ) {
         QGestureEvent *ge = static_cast<QGestureEvent *>(e);
         QPinchGesture *pinch = static_cast<QPinchGesture*>(ge->gesture(Qt::PinchGesture));
