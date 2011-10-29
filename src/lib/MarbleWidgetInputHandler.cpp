@@ -744,7 +744,7 @@ bool MarbleWidgetDefaultInputHandler::eventFilter( QObject* o, QEvent* e )
         QGestureEvent *ge = static_cast<QGestureEvent *>(e);
         QPinchGesture *pinch = static_cast<QPinchGesture*>(ge->gesture(Qt::PinchGesture));
         if (pinch) {
-            qreal scaleFactor = pinch->scaleFactor();
+            const qreal totalScaleFactor = pinch->totalScaleFactor();
             qreal  destLat;
             qreal  destLon;
             QPointF center = pinch->centerPoint();
@@ -766,7 +766,7 @@ bool MarbleWidgetDefaultInputHandler::eventFilter( QObject* o, QEvent* e )
                 d->m_startingRadius = marbleWidget->radius();
                 break;
             case Qt::GestureUpdated:
-                marbleWidget->setRadius( marbleWidget->radius() * scaleFactor );
+                marbleWidget->setRadius( d->m_startingRadius * totalScaleFactor );
                 break;
             case Qt::GestureFinished:
                 marbleWidget->viewport()->resetFocusPoint();
