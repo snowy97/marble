@@ -138,52 +138,49 @@ bool EquirectProjection::screenCoordinates( const GeoDataCoordinates &geopoint,
 
     // Make sure that the requested point is within the visible y range:
     if ( 0 <= y + size.height() / 2.0 && y < height + size.height() / 2.0 ) {
-        // First we deal with the case where the repetition doesn't happen
         if ( !repeatX() ) {
-            *x = itX;
+            // Case where the repetition doesn't happen
             if ( 0 < itX + size.width() / 2.0  && itX < width + size.width() / 2.0 ) {
-                return true;
+                // the requested point is within the visible x range:
+                x[0] = itX;
+                pointRepeatNum = 1;
             }
             else {
                 // the requested point is out of the visible x range:
-                return false;
+                pointRepeatNum = 0;
             }
         }
-        // For the repetition case the same geopoint gets displayed on 
-        // the map many times.across the longitude.
+        else {
+            // For the repetition case the same geopoint gets displayed on
+            // the map many times.across the longitude.
 
-        int xRepeatDistance = 4 * radius;
+            int xRepeatDistance = 4 * radius;
 
-        // Finding the leftmost positive x value
-        if ( itX + size.width() > xRepeatDistance ) {
-            const int repeatNum = (int)( ( itX + size.width() ) / xRepeatDistance );
-            itX = itX - repeatNum * xRepeatDistance;
+            // Finding the leftmost positive x value
+            if ( itX + size.width() > xRepeatDistance ) {
+                const int repeatNum = (int)( ( itX + size.width() ) / xRepeatDistance );
+                itX = itX - repeatNum * xRepeatDistance;
+            }
+            if ( itX + size.width() / 2.0 < 0 ) {
+                itX += xRepeatDistance;
+            }
+
+            // Now iterate through all visible x screen coordinates for the point
+            // from left to right.
+            pointRepeatNum = 0;
+            while ( itX - size.width() / 2.0 < width ) {
+                x[pointRepeatNum] = itX;
+                ++pointRepeatNum;
+                itX += xRepeatDistance;
+            }
         }
-        if ( itX + size.width() / 2.0 < 0 ) {
-            itX += xRepeatDistance;
-        }
-        // The requested point is out of the visible x range:
-        if ( itX > width + size.width() / 2.0 ) {
-            return false;
-        }
-
-        // Now iterate through all visible x screen coordinates for the point 
-        // from left to right.
-        int itNum = 0;
-        while ( itX - size.width() / 2.0 < width ) {
-            *x = itX;
-            ++x;
-            ++itNum;
-            itX += xRepeatDistance;
-        }
-
-        pointRepeatNum = itNum;
-
-        return true;
+    }
+    else {
+        // The requested point is out of the visible y range:
+        pointRepeatNum = 0;
     }
 
-    // The requested point is out of the visible y range.
-    return false;
+    return ( pointRepeatNum > 0 );
 }
 
 
