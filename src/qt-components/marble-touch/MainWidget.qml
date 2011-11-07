@@ -178,6 +178,39 @@ Item {
                 positionDistance.text = Math.round( tracking.lastKnownPosition.distance( indicatorPosition.longitude, indicatorPosition.latitude ) / 100 ) / 10 + " km"
             }
         }
+
+        MouseArea {
+            anchors.fill: parent
+            property int mousePrevX: 0
+            property int mousePrevY: 0
+
+            onPressed: {
+                if ( mouse.button === Qt.LeftButton ) {
+                    map.smooth = false
+                    mousePrevX = mouse.x
+                    mousePrevY = mouse.y
+                }
+            }
+
+            onReleased: {
+                if ( mouse.button === Qt.LeftButton ) {
+                    map.smooth = true
+                }
+            }
+
+            onPositionChanged: {
+                if ( mouse.buttons & Qt.LeftButton ) {
+                    if ( !map.smooth ) {
+                        var dx = mousePrevX - mouse.x
+                        var dy = mousePrevY - mouse.y
+                        var newCenter = map.coordinate( map.width/2 + dx, map.height/2 + dy )
+                        map.setCenter( newCenter )
+                        mousePrevX = mouse.x
+                        mousePrevY = mouse.y
+                    }
+                }
+            }
+        }
     }
     
     // Delivers the current (gps) position.
