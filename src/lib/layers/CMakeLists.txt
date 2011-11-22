@@ -19,7 +19,6 @@ set( layers_SRCS
     layers/MarbleSplashLayer.cpp
     layers/MeasureTool.cpp
     layers/PlacemarkLayout.cpp
-    layers/TextureLayer.cpp
     layers/VectorMapBaseLayer.cpp
     layers/VectorMapLayer.cpp
 )
