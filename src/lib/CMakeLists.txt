@@ -54,6 +54,24 @@ endif (QTONLY)
 ########### next target ###############
 
 set(marblewidgetprivate_SRCS
+    blendings/Blending.cpp
+    blendings/BlendingAlgorithms.cpp
+    blendings/BlendingFactory.cpp
+    blendings/SunLightBlending.cpp
+    TextureColorizer.cpp
+    TextureMapperInterface.cpp
+    TextureTile.cpp
+    TileCoordsPyramid.cpp
+    TileLoader.cpp
+    ScanlineTextureMapperContext.cpp
+    SphericalScanlineTextureMapper.cpp
+    EquirectScanlineTextureMapper.cpp
+    MercatorScanlineTextureMapper.cpp
+    TileScalingTextureMapper.cpp
+    StackedTile.cpp
+    TileId.cpp
+    StackedTileLoader.cpp
+    TileLoaderHelper.cpp
     layers/TextureLayer.cpp
 )
 
@@ -70,10 +88,6 @@ set(marblewidget_SRCS
     ${graphicsview_SRCS}
     ${screengraphicsitem_SRCS}
     ${layers_SRCS}
-    blendings/Blending.cpp
-    blendings/BlendingAlgorithms.cpp
-    blendings/BlendingFactory.cpp
-    blendings/SunLightBlending.cpp
     DownloadRegionDialog.cpp
     LatLonBoxWidget.cpp
     MarbleWidget.cpp
@@ -96,10 +110,7 @@ set(marblewidget_SRCS
     GeoDataTreeModel.cpp
     kdescendantsproxymodel.cpp
     MarbleDebug.cpp
-    TextureTile.cpp
-    TileCoordsPyramid.cpp
     TileLevelRangeWidget.cpp
-    TileLoader.cpp
     QtMarbleConfigDialog.cpp
     ClipPainter.cpp
     DownloadPolicy.cpp
@@ -132,23 +143,12 @@ set(marblewidget_SRCS
     PlacemarkInfoDialog.cpp
     Planet.cpp
     Quaternion.cpp
-    TextureColorizer.cpp
-    TextureMapperInterface.cpp
-    ScanlineTextureMapperContext.cpp
-    SphericalScanlineTextureMapper.cpp
-    EquirectScanlineTextureMapper.cpp
-    MercatorScanlineTextureMapper.cpp
-    TileScalingTextureMapper.cpp
     DiscCache.cpp
     ServerLayout.cpp
     StoragePolicy.cpp
     CacheStoragePolicy.cpp
     FileStoragePolicy.cpp
     FileStorageWatcher.cpp
-    StackedTile.cpp
-    TileId.cpp
-    StackedTileLoader.cpp
-    TileLoaderHelper.cpp
     TileCreator.cpp
     TinyWebBrowser.cpp
     #jsonparser.cpp
