@@ -283,11 +283,6 @@ MarbleModel *MarbleWidget::model() const
 }
 
 
-ViewportParams* MarbleWidget::viewport()
-{
-    return d->m_map.viewport();
-}
-
 const ViewportParams* MarbleWidget::viewport() const
 {
     return d->m_map.viewport();
@@ -638,7 +633,7 @@ void MarbleWidget::centerOn( const GeoDataCoordinates &position, bool animated )
 void MarbleWidget::centerOn( const GeoDataLatLonBox &box, bool animated )
 {
     int newRadius = radius();
-    ViewportParams* viewparams = viewport();
+    const ViewportParams* viewparams = d->m_map.viewport();
     //prevent divide by zero
     if( box.height() && box.width() ) {
         //work out the needed zoom level

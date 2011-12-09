@@ -170,7 +170,6 @@ class MARBLE_EXPORT MarbleWidget : public QWidget
      */
     MarbleModel *model() const;
 
-    ViewportParams *viewport();
     const ViewportParams *viewport() const;
 
     MarbleWidgetPopupMenu *popupMenu();

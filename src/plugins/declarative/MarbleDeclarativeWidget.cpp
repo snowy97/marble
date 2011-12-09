@@ -155,7 +155,7 @@ QPoint MarbleWidget::pixel( qreal lon, qreal lat ) const
     GeoDataCoordinates position( lon, lat, 0, GeoDataCoordinates::Degree );
     qreal x( 0.0 );
     qreal y( 0.0 );
-    ViewportParams *viewport = m_marbleWidget->viewport();
+    const ViewportParams *viewport = m_marbleWidget->viewport();
     viewport->screenCoordinates( position, x, y );
     return QPoint( x, y );
 }

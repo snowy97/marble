@@ -242,7 +242,7 @@ void MarbleWidgetDefaultInputHandler::Private::ZoomAt(MarbleWidget* marbleWidget
         return;
     }
 
-    ViewportParams* now = marbleWidget->viewport();
+    const ViewportParams* now = marbleWidget->viewport();
 
     qreal x(0), y(0);
     if (!now->screenCoordinates(destLon, destLat, x, y)) {
