@@ -214,14 +214,14 @@ class MARBLE_EXPORT AbstractProjection
      * @deprecated
      * use @see screenCoordinates(qreal,qreal,const ViewportParams*,qreal&,qreal&)
      */
-    bool screenCoordinates( qreal lon, qreal lat,
+    MARBLE_DEPRECATED( bool screenCoordinates( qreal lon, qreal lat,
                                     const ViewportParams *viewport,
-                                    int& x, int& y ) const;
+                                    int& x, int& y ) const );
 
     /* DEPRECATED */
-    bool screenCoordinates( const GeoDataCoordinates &geopoint, 
+    MARBLE_DEPRECATED( bool screenCoordinates( const GeoDataCoordinates &geopoint,
                                     const ViewportParams *viewport,
-                                    int &x, int &y, bool &globeHidesPoint ) const;
+                                    int &x, int &y, bool &globeHidesPoint ) const );
 
  protected:
     bool lineStringToPolygon( const GeoDataLineString &lineString,
