@@ -205,7 +205,7 @@ Item {
         width: 60
         fillMode: Image.PreserveAspectFit
         smooth: true
-        source: positionProvider.hasPosition ? "qrc:/marker.svg" : "qrc:/marker-yellow.svg"
+        source: map.tracking.hasPosition ? "qrc:/marker.svg" : "qrc:/marker-yellow.svg"
         visible: false
 
         // Animation that grows/shrinks the marker.
@@ -241,6 +241,7 @@ Item {
         //rotation: 180 + map.tracking.lastKnownPosition.bearing( map.center.longitude, map.center.latitude )
     }
 
+    // A marker that points to the current position.
     Image {
         id: positionFinder
         anchors.right: parent.right
@@ -249,7 +250,7 @@ Item {
         z: 10
         visible: settings.showPosition
 
-        source: map.tracking.positionSource.hasPosition ? "qrc:/marker.svg" : "qrc:/marker-yellow.svg"
+        source: map.tracking.hasPosition ? "qrc:/marker.svg" : "qrc:/marker-yellow.svg"
 
         MouseArea {
             anchors.fill: parent

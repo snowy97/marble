@@ -87,11 +87,21 @@ void Tracking::setPositionSource( PositionSource* source )
                     this, SLOT( updateLastKnownPosition() ) );
             connect( source, SIGNAL( hasPositionChanged() ),
                     this, SLOT( updatePositionMarker() ) );
+            connect( source, SIGNAL( hasPositionChanged() ),
+                     this, SIGNAL( hasPositionChanged() ) );
             connect( m_marbleWidget, SIGNAL( visibleLatLonAltBoxChanged() ),
                     this, SLOT( updatePositionMarker() ) );
         }
         emit positionSourceChanged();
     }
+}
+
+bool Tracking::hasPosition() const
+{
+    if ( !m_positionSource )
+        return false;
+
+    return m_positionSource->hasPosition();
 }
 
 void Tracking::setMarbleWidget( MarbleWidget* widget )

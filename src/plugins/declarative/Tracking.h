@@ -35,6 +35,7 @@ class Tracking : public QObject
     Q_PROPERTY( bool autoCenter READ autoCenter WRITE setAutoCenter NOTIFY autoCenterChanged )
     Q_PROPERTY( bool autoZoom READ autoZoom WRITE setAutoZoom NOTIFY autoZoomChanged )
     Q_PROPERTY( Marble::Declarative::PositionSource* positionSource READ positionSource WRITE setPositionSource NOTIFY positionSourceChanged )
+    Q_PROPERTY( bool hasPosition READ hasPosition NOTIFY hasPositionChanged )
     Q_PROPERTY( QObject* positionMarker READ positionMarker WRITE setPositionMarker NOTIFY positionMarkerChanged )
     Q_PROPERTY( bool hasLastKnownPosition READ hasLastKnownPosition NOTIFY hasLastKnownPositionChanged )
     Q_PROPERTY( Marble::Declarative::Coordinate* lastKnownPosition READ lastKnownPosition WRITE setLastKnownPosition NOTIFY lastKnownPositionChanged )
@@ -53,6 +54,8 @@ public:
     Marble::Declarative::PositionSource* positionSource();
 
     void setPositionSource( Marble::Declarative::PositionSource* source );
+
+    bool hasPosition() const;
 
     QObject* positionMarker();
 
@@ -87,6 +90,8 @@ Q_SIGNALS:
     void showTrackChanged();
 
     void positionSourceChanged();
+
+    void hasPositionChanged();
 
     void positionMarkerChanged();
 
