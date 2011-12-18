@@ -181,19 +181,25 @@ Item {
 
         MouseArea {
             anchors.fill: parent
+            acceptedButtons: Qt.LeftButton | Qt.MiddleButton
             property int mousePrevX: 0
             property int mousePrevY: 0
+            property int startRadius: 1
 
             onPressed: {
-                if ( mouse.button === Qt.LeftButton ) {
+                if ( mouse.button === Qt.LeftButton || mouse.button === Qt.MiddleButton ) {
                     map.smooth = false
                     mousePrevX = mouse.x
                     mousePrevY = mouse.y
                 }
+
+                if ( mouse.button === Qt.MiddleButton ) {
+                    startRadius = map.radius
+                }
             }
 
             onReleased: {
-                if ( mouse.button === Qt.LeftButton ) {
+                if ( mouse.button === Qt.LeftButton || mouse.button === Qt.MiddleButton ) {
                     map.smooth = true
                 }
             }
@@ -207,6 +213,13 @@ Item {
                         map.setCenter( newCenter )
                         mousePrevX = mouse.x
                         mousePrevY = mouse.y
+                    }
+                }
+                else if ( mouse.buttons & Qt.MiddleButton ) {
+                    if ( !map.smooth ) {
+                        var dy = mousePrevY - mouse.y
+                        var newRadius = startRadius
+                        map.radius = newRadius * Math.pow( 1.005, dy )
                     }
                 }
             }
