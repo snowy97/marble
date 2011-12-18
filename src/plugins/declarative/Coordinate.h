@@ -11,13 +11,14 @@
 #ifndef MARBLE_DECLARATIVE_COORDINATE_H
 #define MARBLE_DECLARATIVE_COORDINATE_H
 
-#include "GeoDataCoordinates.h"
-
 #include <QtCore/QObject>
 #include <QtDeclarative/QtDeclarative>
 
 namespace Marble
 {
+
+class GeoDataCoordinates;
+
 namespace Declarative
 {
 
@@ -35,8 +36,14 @@ class Coordinate : public QObject
     Q_PROPERTY( qreal altitude  READ altitude  WRITE setAltitude  NOTIFY altitudeChanged )
 
 public:
+    explicit Coordinate( QObject *parent = 0 );
+
     /** Constructor */
-    Coordinate( qreal lon = 0.0, qreal lat = 0.0, qreal altitude = 0.0, QObject *parent = 0 );
+    Coordinate( qreal lon, qreal lat, qreal altitude, QObject *parent = 0 );
+
+    ~Coordinate();
+
+    bool isValid() const;
 
     /** Provides access to the longitude (degree) of the coordinate */
     qreal longitude() const;
@@ -78,7 +85,7 @@ Q_SIGNALS:
     void altitudeChanged();
 
 private:
-    GeoDataCoordinates m_coordinate;
+    GeoDataCoordinates *m_coordinate;
 };
 
 }

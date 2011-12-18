@@ -227,7 +227,6 @@ Item {
         }
 
         PinchArea {
-            enabled: true
             anchors.fill: parent
             property int startRadius: 1
 

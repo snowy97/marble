@@ -17,55 +17,97 @@ namespace Marble
 namespace Declarative
 {
 
-Coordinate::Coordinate( qreal lon, qreal lat, qreal alt, QObject *parent ) :
-    QObject( parent )
+Coordinate::Coordinate( QObject *parent ) :
+    QObject( parent ),
+    m_coordinate( 0 )
 {
-    setLongitude( lon );
-    setLatitude( lat );
-    setAltitude( alt );
+}
+
+Coordinate::Coordinate( qreal lon, qreal lat, qreal alt, QObject *parent ) :
+    QObject( parent ),
+    m_coordinate( new GeoDataCoordinates( lon, lat, alt, GeoDataCoordinates::Degree ) )
+{
+}
+
+Coordinate::~Coordinate()
+{
+    delete m_coordinate;
+}
+
+bool Coordinate::isValid() const
+{
+    return m_coordinate != 0;
 }
 
 qreal Coordinate::longitude() const
 {
-    return m_coordinate.longitude( GeoDataCoordinates::Degree );
+    if ( !m_coordinate )
+        return GeoDataCoordinates().longitude( GeoDataCoordinates::Degree );
+
+    return m_coordinate->longitude( GeoDataCoordinates::Degree );
 }
 
 void Coordinate::setLongitude( qreal lon )
 {
-    m_coordinate.setLongitude( lon, GeoDataCoordinates::Degree );
+    if ( !m_coordinate ) {
+        m_coordinate = new GeoDataCoordinates();
+    }
+
+    m_coordinate->setLongitude( lon, GeoDataCoordinates::Degree );
     emit longitudeChanged();
 }
 
 qreal Coordinate::latitude() const
 {
-    return m_coordinate.latitude( GeoDataCoordinates::Degree );
+    if ( !m_coordinate )
+        return GeoDataCoordinates().latitude( GeoDataCoordinates::Degree );
+
+    return m_coordinate->latitude( GeoDataCoordinates::Degree );
 }
 
 void Coordinate::setLatitude( qreal lat )
 {
-    m_coordinate.setLatitude( lat, GeoDataCoordinates::Degree );
+    if ( !m_coordinate ) {
+        m_coordinate = new GeoDataCoordinates();
+    }
+
+    m_coordinate->setLatitude( lat, GeoDataCoordinates::Degree );
     emit latitudeChanged();
 }
 
 qreal Coordinate::altitude() const
 {
-    return m_coordinate.altitude();
+    if ( !m_coordinate )
+        return GeoDataCoordinates().altitude();
+
+    return m_coordinate->altitude();
 }
 
 void Coordinate::setAltitude( qreal alt )
 {
-    m_coordinate.setAltitude( alt );
+    if ( !m_coordinate ) {
+        m_coordinate = new GeoDataCoordinates();
+    }
+
+    m_coordinate->setAltitude( alt );
     emit altitudeChanged();
 }
 
 GeoDataCoordinates Coordinate::coordinates() const
 {
-    return m_coordinate;
+    if ( !m_coordinate )
+        return GeoDataCoordinates();
+
+    return *m_coordinate;
 }
 
 void Coordinate::setCoordinates( const GeoDataCoordinates &coordinates )
 {
-    m_coordinate = coordinates;
+    if ( !m_coordinate ) {
+        m_coordinate = new GeoDataCoordinates();
+    }
+
+    *m_coordinate = coordinates;
 }
 
 qreal Coordinate::distance( qreal longitude, qreal latitude ) const
@@ -77,16 +119,22 @@ qreal Coordinate::distance( qreal longitude, qreal latitude ) const
 
 qreal Coordinate::bearing( qreal longitude, qreal latitude ) const
 {
-    qreal deltaLon = longitude * DEG2RAD - m_coordinate.longitude();
+    qreal deltaLon = longitude * DEG2RAD - this->longitude();
     qreal y = sin( deltaLon ) * cos( latitude * DEG2RAD );
-    qreal x = cos( m_coordinate.latitude() ) * sin( latitude * DEG2RAD ) -
-              sin( m_coordinate.latitude() ) * cos( latitude * DEG2RAD ) * cos( deltaLon );
+    qreal x = cos( this->latitude() ) * sin( latitude * DEG2RAD ) -
+              sin( this->latitude() ) * cos( latitude * DEG2RAD ) * cos( deltaLon );
     return RAD2DEG * atan2( y, x );
 }
 
 bool Coordinate::operator == ( const Coordinate &other ) const
 {
-    return m_coordinate == other.m_coordinate;
+    if ( m_coordinate == 0 )
+        return false;
+
+    if ( other.m_coordinate == 0 )
+        return false;
+
+    return *m_coordinate == *other.m_coordinate;
 }
 
 bool Coordinate::operator != ( const Coordinate &other ) const

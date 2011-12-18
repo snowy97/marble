@@ -261,7 +261,11 @@ QPoint MarbleWidget::pixel( qreal lon, qreal lat ) const
 Coordinate *MarbleWidget::coordinate( int x, int y )
 {
     qreal lat( 0.0 ), lon( 0.0 );
-    m_map.geoCoordinates( x, y, lon, lat );
+
+    if ( !m_map.geoCoordinates( x, y, lon, lat ) ) {
+        return new Coordinate( this );
+    }
+
     return new Coordinate( lon, lat, 0.0, this );
 }
 
