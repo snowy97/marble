@@ -47,7 +47,7 @@ class MarbleWidget : public QDeclarativeItem
     Q_OBJECT
 
     Q_PROPERTY( Marble::Declarative::Coordinate* center READ center WRITE setCenter NOTIFY visibleLatLonAltBoxChanged )
-    Q_PROPERTY( int zoom READ zoom WRITE setZoom NOTIFY zoomChanged )
+    Q_PROPERTY( int radius READ radius WRITE setRadius NOTIFY radiusChanged )
 
     Q_PROPERTY( QString mapThemeId READ mapThemeId WRITE setMapThemeId NOTIFY mapThemeChanged )
     Q_PROPERTY( QString projection READ projection WRITE setProjection )
@@ -77,9 +77,9 @@ public:
 
     void setWorkOffline( bool workOffline );
 
-    int zoom() const;
+    int radius() const;
 
-    void setZoom( int zoom );
+    void setRadius( int radius );
 
     void setActiveRenderPlugins( const QStringList &items );
 
@@ -97,7 +97,7 @@ Q_SIGNALS:
 
     void workOfflineChanged();
 
-    void zoomChanged();
+    void radiusChanged();
 
     void mouseClickGeoPosition( qreal longitude, qreal latitude );
 

@@ -95,8 +95,8 @@ MarbleWidget::MarbleWidget( QDeclarativeItem *parent ) :
 
     connect( &m_map, SIGNAL( visibleLatLonAltBoxChanged( GeoDataLatLonAltBox ) ),
              this, SIGNAL( visibleLatLonAltBoxChanged( ) ) );
-    connect( &m_map, SIGNAL( visibleLatLonAltBoxChanged( GeoDataLatLonAltBox ) ),
-             this, SIGNAL( zoomChanged() ) );
+    connect( &m_map, SIGNAL( radiusChanged( int ) ),
+             this, SIGNAL( radiusChanged() ) );
     connect( &m_map, SIGNAL( themeChanged( const QString & ) ),
              this, SIGNAL( mapThemeChanged() ) );
     connect( &m_map, SIGNAL( mouseClickGeoPosition( qreal, qreal, GeoDataCoordinates::Unit ) ),
@@ -240,16 +240,12 @@ void MarbleWidget::setProjection( const QString &projection )
 
 void MarbleWidget::zoomIn()
 {
-    const int zoomStep = 60;
-
-    setZoom( zoom() + zoomStep );
+    setRadius( radius() * 2 );
 }
 
 void MarbleWidget::zoomOut()
 {
-    const int zoomStep = 60;
-
-    setZoom( zoom() - zoomStep );
+    setRadius( radius() / 2 );
 }
 
 QPoint MarbleWidget::pixel( qreal lon, qreal lat ) const
@@ -380,15 +376,13 @@ void MarbleWidget::setWorkOffline( bool workOffline )
     m_model.setWorkOffline( workOffline );
 }
 
-int MarbleWidget::zoom() const
+int MarbleWidget::radius() const
 {
-    return (200.0 * qLn( m_map.radius() ) );
+    return m_map.radius();
 }
 
-void MarbleWidget::setZoom( int zoom )
+void MarbleWidget::setRadius( int radius )
 {
-    const qreal radius = qPow( M_E, ( zoom / 200.0 ) );
-
     m_map.setRadius( radius );
     update();
 }
