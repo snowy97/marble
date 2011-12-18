@@ -8,6 +8,7 @@
 // Copyright 2011 Daniel Marth <danielmarth@gmx.at>
 
 import Qt 4.7
+import QtQuick 1.1
 import org.kde.edu.marble 0.11
 import com.nokia.meego 1.0
 
@@ -222,6 +223,25 @@ Item {
                         map.radius = newRadius * Math.pow( 1.005, dy )
                     }
                 }
+            }
+        }
+
+        PinchArea {
+            enabled: true
+            anchors.fill: parent
+            property int startRadius: 1
+
+            onPinchStarted: {
+                startRadius = map.radius
+            }
+
+            onPinchUpdated: {
+                map.smooth = false
+                map.radius = startRadius * pinch.scale
+            }
+
+            onPinchFinished: {
+                map.smooth = true
             }
         }
     }
