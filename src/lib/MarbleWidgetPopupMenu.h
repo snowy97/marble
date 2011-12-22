@@ -34,7 +34,7 @@ class MarbleWidget;
 class MarbleModel;
 class GeoDataCoordinates;
 class GeoDataPlacemark;
-class MarbleRunnerManager;
+class MarbleReverseGeocoding;
 
 
 class MARBLE_EXPORT MarbleWidgetPopupMenu  : public QObject
@@ -42,7 +42,7 @@ class MARBLE_EXPORT MarbleWidgetPopupMenu  : public QObject
     Q_OBJECT
 
  public:
-    MarbleWidgetPopupMenu(MarbleWidget*, const MarbleModel*);
+    MarbleWidgetPopupMenu(MarbleWidget*, MarbleModel*);
     virtual ~MarbleWidgetPopupMenu(){}
 
     /**
@@ -86,7 +86,7 @@ private Q_SLOTS:
 
  private:
     Q_DISABLE_COPY( MarbleWidgetPopupMenu )
-    const MarbleModel    *const m_model;
+    MarbleModel    *const m_model;
     MarbleWidget   *m_widget;
 
     QVector<const GeoDataPlacemark*>  m_featurelist;
@@ -103,7 +103,7 @@ private Q_SLOTS:
 
     QAction  *m_rmbExtensionPoint;
 
-    MarbleRunnerManager* m_runnerManager;
+    MarbleReverseGeocoding* m_runnerManager;
 
     QPoint m_mousePosition;
 };

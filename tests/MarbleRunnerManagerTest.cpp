@@ -6,14 +6,15 @@
 // the source code.
 //
 // Copyright 2011 Thibaut Gridel <tgridel@free.fr>
+// Copyright 2012 Bernhard Beschow <bbeschow@cs.tu-berlin.de>
 //
 
 #include <QtTest/QtTest>
 #include <QtTest/QSignalSpy>
 
 #include "MarbleDirs.h"
+#include "MarbleModel.h"
 #include "MarbleRunnerManager.h"
-#include "PluginManager.h"
 #include "GeoDataPlacemark.h"
 #include "routing/RouteRequest.h"
 
@@ -43,7 +44,7 @@ private slots:
     void testAsyncParsing();
 
 public:
-    PluginManager m_pluginManager;
+    MarbleModel *m_model;
     int m_time;
     QString m_name;
     GeoDataCoordinates m_coords;
@@ -69,15 +70,20 @@ void MarbleRunnerManagerTest::initTestCase()
     m_request.append( m_coords2 );
 
     m_fileName = MarbleDirs::path( "placemarks/otherplacemarks.cache" );
+
+    m_model = new MarbleModel( this );
+    m_model->setWorkOffline( true );
 }
 
 void MarbleRunnerManagerTest::cleanupTestCase()
 {
+    delete m_model;
+    m_model = 0;
 }
 
 void MarbleRunnerManagerTest::testSyncPlacemarks()
 {
-    MarbleRunnerManager m_runnerManager(&m_pluginManager, this);
+    MarblePlacemarkSearch m_runnerManager(m_model, this);
 
     QSignalSpy finishSpy( &m_runnerManager, SIGNAL(placemarkSearchFinished()) );
     QSignalSpy resultSpy( &m_runnerManager, SIGNAL(searchResultChanged(QVector<GeoDataPlacemark*>)) );
@@ -109,7 +115,7 @@ void MarbleRunnerManagerTest::testSyncPlacemarks()
 
 void MarbleRunnerManagerTest::testAsyncPlacemarks()
 {
-    MarbleRunnerManager m_runnerManager(&m_pluginManager, this);
+    MarblePlacemarkSearch m_runnerManager(m_model, this);
 
     QSignalSpy finishSpy( &m_runnerManager, SIGNAL(placemarkSearchFinished()) );
     QSignalSpy resultSpy( &m_runnerManager, SIGNAL(searchResultChanged(QVector<GeoDataPlacemark*>)) );
@@ -130,7 +136,7 @@ void MarbleRunnerManagerTest::testAsyncPlacemarks()
 
 void MarbleRunnerManagerTest::testSyncReverse()
 {
-    MarbleRunnerManager m_runnerManager(&m_pluginManager, this);
+    MarbleReverseGeocoding m_runnerManager(m_model, this);
 
     QSignalSpy finishSpy( &m_runnerManager, SIGNAL(reverseGeocodingFinished()) );
     QSignalSpy resultSpy( &m_runnerManager, SIGNAL(reverseGeocodingFinished(GeoDataCoordinates,GeoDataPlacemark)) );
@@ -161,7 +167,7 @@ void MarbleRunnerManagerTest::testSyncReverse()
 
 void MarbleRunnerManagerTest::testAsyncReverse()
 {
-    MarbleRunnerManager m_runnerManager(&m_pluginManager, this);
+    MarbleReverseGeocoding m_runnerManager(m_model, this);
 
     QSignalSpy finishSpy( &m_runnerManager, SIGNAL(reverseGeocodingFinished()) );
     QSignalSpy resultSpy( &m_runnerManager, SIGNAL(reverseGeocodingFinished(GeoDataCoordinates,GeoDataPlacemark)) );
@@ -180,7 +186,7 @@ void MarbleRunnerManagerTest::testAsyncReverse()
 
 void MarbleRunnerManagerTest::testSyncRouting()
 {
-    MarbleRunnerManager m_runnerManager(&m_pluginManager, this);
+    MarbleRunnerManager m_runnerManager(m_model, this);
 
     QSignalSpy finishSpy( &m_runnerManager, SIGNAL(routingFinished()) );
     QSignalSpy resultSpy( &m_runnerManager, SIGNAL( routeRetrieved(GeoDataDocument*)) );
@@ -200,7 +206,7 @@ void MarbleRunnerManagerTest::testSyncRouting()
 
 void MarbleRunnerManagerTest::testAsyncRouting()
 {
-    MarbleRunnerManager m_runnerManager(&m_pluginManager, this);
+    MarbleRunnerManager m_runnerManager(m_model, this);
 
     QSignalSpy finishSpy( &m_runnerManager, SIGNAL(routingFinished()) );
     QSignalSpy resultSpy( &m_runnerManager, SIGNAL( routeRetrieved(GeoDataDocument*)) );
@@ -219,7 +225,7 @@ void MarbleRunnerManagerTest::testAsyncRouting()
 
 void MarbleRunnerManagerTest::testSyncParsing()
 {
-    MarbleRunnerManager m_runnerManager(&m_pluginManager, this);
+    MarbleFileParser m_runnerManager(m_model, this);
 
     QSignalSpy finishSpy( &m_runnerManager, SIGNAL( parsingFinished()) );
     QSignalSpy resultSpy( &m_runnerManager, SIGNAL( parsingFinished(GeoDataDocument*,QString)) );
@@ -239,7 +245,7 @@ void MarbleRunnerManagerTest::testSyncParsing()
 
 void MarbleRunnerManagerTest::testAsyncParsing()
 {
-    MarbleRunnerManager m_runnerManager(&m_pluginManager, this);
+    MarbleFileParser m_runnerManager(m_model, this);
 
     QSignalSpy finishSpy( &m_runnerManager, SIGNAL( parsingFinished() ) );
     QSignalSpy resultSpy( &m_runnerManager, SIGNAL( parsingFinished(GeoDataDocument*,QString)) );

@@ -23,6 +23,7 @@
 namespace Marble
 {
 // Forward declaration
+class GeoDataLatLonAltBox;
 class MarbleModel;
 class MarbleWidget;
 class RenderPlugin;

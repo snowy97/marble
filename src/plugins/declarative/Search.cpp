@@ -13,6 +13,7 @@
 #include "MarbleDeclarativeWidget.h"
 #include "MarbleModel.h"
 #include "MarblePlacemarkModel.h"
+#include "MarbleRunnerManager.h"
 #include "ViewportParams.h"
 
 namespace Marble
@@ -56,8 +57,7 @@ void Search::setDelegateParent( QGraphicsItem* parent )
 void Search::find( const QString &searchTerm )
 {
     if ( !m_runnerManager && m_marbleWidget ) {
-        m_runnerManager = new Marble::MarbleRunnerManager( m_marbleWidget->model()->pluginManager(), this );
-        m_runnerManager->setModel( m_marbleWidget->model() );
+        m_runnerManager = new Marble::MarblePlacemarkSearch( m_marbleWidget->model(), this );
         connect( m_runnerManager, SIGNAL( searchFinished( QString ) ),
                  this, SLOT( handleSearchResult() ) );
         connect( m_runnerManager, SIGNAL( searchResultChanged( QAbstractItemModel* ) ),

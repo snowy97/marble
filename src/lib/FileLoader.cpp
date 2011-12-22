@@ -39,26 +39,24 @@ public:
     FileLoaderPrivate( FileLoader* parent, MarbleModel *model,
                        const QString& file, DocumentRole role )
         : q( parent),
-          m_runner( new MarbleRunnerManager( model->pluginManager(), q ) ),
+          m_runner( new MarbleFileParser( model, q ) ),
           m_filepath ( file ),
           m_documentRole ( role ),
           m_document( 0 ),
           m_clock( model->clock() )
     {
-        m_runner->setModel( model );
     };
 
     FileLoaderPrivate( FileLoader* parent, MarbleModel *model,
                        const QString& contents, const QString& file, DocumentRole role )
         : q( parent ),
-          m_runner( new MarbleRunnerManager( model->pluginManager(), q ) ),
+          m_runner( new MarbleFileParser( model, q ) ),
           m_filepath ( file ),
           m_contents ( contents ),
           m_documentRole ( role ),
           m_document( 0 ),
           m_clock( model->clock() )
     {
-        m_runner->setModel( model );
     };
 
     ~FileLoaderPrivate()
@@ -79,7 +77,7 @@ public:
     void documentParsed( GeoDataDocument *doc, const QString& error);
 
     FileLoader *q;
-    MarbleRunnerManager *m_runner;
+    MarbleFileParser *m_runner;
     QString m_filepath;
     QString m_contents;
     QString m_nonExistentLocalCacheFile;

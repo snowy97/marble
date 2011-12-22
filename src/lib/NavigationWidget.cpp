@@ -44,7 +44,7 @@ class NavigationWidgetPrivate
     MarbleWidget           *m_widget;
     QSortFilterProxyModel  *m_sortproxy;
     QString                 m_searchTerm;
-    MarbleRunnerManager    *m_runnerManager;
+    MarblePlacemarkSearch  *m_runnerManager;
     QTimer                  m_deferSearch;
     GeoDataTreeModel        m_treeModel;
     GeoDataDocument        *m_document;
@@ -115,12 +115,11 @@ NavigationWidget::~NavigationWidget()
 
 void NavigationWidget::setMarbleWidget( MarbleWidget *widget )
 {
-    d->m_runnerManager = new MarbleRunnerManager( widget->model()->pluginManager(), this );
+    d->m_runnerManager = new MarblePlacemarkSearch( widget->model(), this );
     connect( d->m_runnerManager, SIGNAL( searchResultChanged( QVector<GeoDataPlacemark*> ) ),
              this,               SLOT( setLocations( QVector<GeoDataPlacemark*> ) ) );
 
     d->m_widget = widget;
-    d->m_runnerManager->setModel( widget->model() );
     d->m_widget->model()->treeModel()->addDocument( d->m_document );
 
     d->m_sortproxy->setSortLocaleAware( true );

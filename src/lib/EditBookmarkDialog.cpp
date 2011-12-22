@@ -31,7 +31,7 @@ namespace Marble {
 class EditBookmarkDialogPrivate {
 public:
     MarbleWidget *m_widget;
-    MarbleRunnerManager* m_manager;
+    MarbleReverseGeocoding* m_manager;
     BookmarkManager* m_bookmarkManager;
     GeoDataLookAt m_bookmarkLookAt;
     bool m_isCoordinatesEdited;
@@ -144,8 +144,7 @@ void EditBookmarkDialog::setMarbleWidget( MarbleWidget* widget )
     d->m_ui.m_latitude->setNotation( notation );
 
     //reverse geocode the bookmark point for better user experience
-    d->m_manager = new MarbleRunnerManager( d->m_widget->model()->pluginManager(), this );
-    d->m_manager->setModel( d->m_widget->model() );
+    d->m_manager = new MarbleReverseGeocoding( d->m_widget->model(), this );
     QObject::connect( d->m_manager, SIGNAL( reverseGeocodingFinished( GeoDataCoordinates, GeoDataPlacemark ) ),
             this, SLOT( retrieveGeocodeResult( GeoDataCoordinates, GeoDataPlacemark ) ) );
     d->m_manager->reverseGeocoding( d->m_bookmarkLookAt.coordinates() );

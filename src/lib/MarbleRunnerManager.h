@@ -27,11 +27,9 @@ namespace Marble
 
 class GeoDataPlacemark;
 class MarbleModel;
-class PluginManager;
 class RouteRequest;
 class RunnerTask;
 
-class MarbleRunnerManagerPrivate;
 class MARBLE_EXPORT MarbleRunnerManager : public QObject
 {
     Q_OBJECT
@@ -42,35 +40,10 @@ public:
       * @param pluginManager The plugin manager that gives access to RunnerPlugins
       * @param parent Optional parent object
       */
-    explicit MarbleRunnerManager( const PluginManager* pluginManager, QObject *parent = 0 );
+    explicit MarbleRunnerManager( MarbleModel *model, QObject *parent = 0 );
 
     /** Destructor */
     ~MarbleRunnerManager();
-
-    /**
-      * Set a pointer to the map instance to be passed to MarbleAbstractRunner instances
-      */
-    void setModel( MarbleModel * model );
-
-    /**
-      * Search for placemarks matching the given search term.
-      * @see findPlacemark is asynchronous with results returned using the
-      * @see searchResultChanged signal.
-      * @see searchPlacemark is blocking.
-      * @see searchFinished signal indicates all runners are finished.
-      */
-    void findPlacemarks( const QString& searchTerm );
-    QVector<GeoDataPlacemark*> searchPlacemarks( const QString& searchTerm );
-
-    /**
-      * Find the address and other meta information for a given geoposition.
-      * @see reverseGeocoding is asynchronous with currently one result
-      * returned using the @see reverseGeocodingFinished signal.
-      * @see searchReverseGeocoding is blocking.
-      * @see reverseGeocodingFinished signal indicates all runners are finished.
-      */
-    void reverseGeocoding( const GeoDataCoordinates &coordinates );
-    QString searchReverseGeocoding( const GeoDataCoordinates &coordinates );
 
     /**
       * Download routes traversing the stopover points in the given route request
@@ -82,17 +55,45 @@ public:
     void retrieveRoute( const RouteRequest *request );
     QVector<GeoDataDocument*> searchRoute( const RouteRequest *request );
 
+Q_SIGNALS:
     /**
-      * Parse the file using the runners for various formats
-      * @see parseFile is asynchronous with results returned using the
-      * @see parsingFinished signal.
-      * @see openFile is blocking.
-      * @see parsingFinished signal indicates all runners are finished.
+      * A route was retrieved
       */
-    void parseFile( const QString& fileName, DocumentRole role = UserDocument );
-    GeoDataDocument* openFile( const QString& fileName, DocumentRole role = UserDocument );
+    void routeRetrieved( GeoDataDocument* route );
 
-signals:
+    /** signal emitted whenever all runners are finished for the query
+      */
+    void routingFinished();
+
+private:
+    Q_PRIVATE_SLOT( d, void addRoutingResult( GeoDataDocument* route ) )
+
+    Q_PRIVATE_SLOT( d, void cleanupRoutingTask( RunnerTask* task ) )
+
+    class Private;
+    friend class Private;
+
+    Private* const d;
+};
+
+class MARBLE_EXPORT MarblePlacemarkSearch : public QObject
+{
+    Q_OBJECT
+
+public:
+    explicit MarblePlacemarkSearch( MarbleModel *model, QObject *parent = 0 );
+
+  /**
+    * Search for placemarks matching the given search term.
+    * @see findPlacemark is asynchronous with results returned using the
+    * @see searchResultChanged signal.
+    * @see searchPlacemark is blocking.
+    * @see searchFinished signal indicates all runners are finished.
+    */
+    void findPlacemarks( const QString& searchTerm );
+    QVector<GeoDataPlacemark*> searchPlacemarks( const QString& searchTerm );
+
+Q_SIGNALS:
     /**
       * Placemarks were added to or removed from the model
       * @todo FIXME: this sounds like a duplication of QAbstractItemModel signals
@@ -111,6 +112,33 @@ signals:
       */
     void placemarkSearchFinished();
 
+private:
+    Q_PRIVATE_SLOT( d, void addSearchResult( QVector<GeoDataPlacemark*> result ) )
+    Q_PRIVATE_SLOT( d, void cleanupSearchTask( RunnerTask* task ) )
+
+private:
+    class Private;
+    Private *const d;
+};
+
+class MARBLE_EXPORT MarbleReverseGeocoding : public QObject
+{
+    Q_OBJECT
+
+public:
+    explicit MarbleReverseGeocoding( MarbleModel *model, QObject *parent = 0 );
+
+    /**
+      * Find the address and other meta information for a given geoposition.
+      * @see reverseGeocoding is asynchronous with currently one result
+      * returned using the @see reverseGeocodingFinished signal.
+      * @see searchReverseGeocoding is blocking.
+      * @see reverseGeocodingFinished signal indicates all runners are finished.
+      */
+    void reverseGeocoding( const GeoDataCoordinates &coordinates );
+    QString searchReverseGeocoding( const GeoDataCoordinates &coordinates );
+
+Q_SIGNALS:
     /**
       * The reverse geocoding request is finished, the result is stored
       * in the given placemark. This signal is emitted when the first
@@ -124,15 +152,32 @@ signals:
       */
     void reverseGeocodingFinished();
 
+private:
+    Q_PRIVATE_SLOT( d, void addReverseGeocodingResult( const GeoDataCoordinates &coordinates, const GeoDataPlacemark &placemark ) )
+
+private:
+    class Private;
+    Private *const d;
+};
+
+class MARBLE_EXPORT MarbleFileParser : public QObject
+{
+    Q_OBJECT
+
+public:
+    explicit MarbleFileParser( MarbleModel *model, QObject *parent = 0 );
+
     /**
-      * A route was retrieved
+      * Parse the file using the runners for various formats
+      * @see parseFile is asynchronous with results returned using the
+      * @see parsingFinished signal.
+      * @see openFile is blocking.
+      * @see parsingFinished signal indicates all runners are finished.
       */
-    void routeRetrieved( GeoDataDocument* route );
+    void parseFile( const QString& fileName, DocumentRole role = UserDocument );
+    GeoDataDocument* openFile( const QString& fileName, DocumentRole role = UserDocument );
 
-    /** signal emitted whenever all runners are finished for the query
-      */
-    void routingFinished();
-
+Q_SIGNALS:
     /**
       * The file was parsed and potential error message
       */
@@ -142,21 +187,13 @@ signals:
       */
     void parsingFinished();
 
-
 private:
-    Q_PRIVATE_SLOT( d, void addSearchResult( QVector<GeoDataPlacemark*> result ) )
-    Q_PRIVATE_SLOT( d, void addReverseGeocodingResult( const GeoDataCoordinates &coordinates, const GeoDataPlacemark &placemark ) )
-    Q_PRIVATE_SLOT( d, void addRoutingResult( GeoDataDocument* route ) )
     Q_PRIVATE_SLOT( d, void addParsingResult( GeoDataDocument* document, const QString& error = QString() ) )
-
-    Q_PRIVATE_SLOT( d, void cleanupSearchTask( RunnerTask* task ) )
-    Q_PRIVATE_SLOT( d, void cleanupReverseGeocodingTask( RunnerTask* task ) )
-    Q_PRIVATE_SLOT( d, void cleanupRoutingTask( RunnerTask* task ) )
     Q_PRIVATE_SLOT( d, void cleanupParsingTask( RunnerTask* task ) )
 
-    friend class MarbleRunnerManagerPrivate;
-
-    MarbleRunnerManagerPrivate* const d;
+private:
+    class Private;
+    Private *const d;
 };
 
 }

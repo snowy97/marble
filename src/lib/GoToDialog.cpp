@@ -74,7 +74,7 @@ public:
 
     TargetModel m_targetModel;
 
-    MarbleRunnerManager* m_runnerManager;
+    MarblePlacemarkSearch* m_runnerManager;
 
     GeoDataDocument *m_searchResult;
 
@@ -319,8 +319,7 @@ void GoToDialogPrivate::startSearch()
     }
 
     if ( !m_runnerManager ) {
-        m_runnerManager = new MarbleRunnerManager( m_marbleWidget->model()->pluginManager(), m_parent );
-        m_runnerManager->setModel( m_marbleWidget->model() );
+        m_runnerManager = new MarblePlacemarkSearch( m_marbleWidget->model(), m_parent );
         QObject::connect( m_runnerManager, SIGNAL( searchResultChanged( QVector<GeoDataPlacemark*> ) ),
                           m_parent, SLOT( updateSearchResult( QVector<GeoDataPlacemark*> ) ) );
         QObject::connect( m_runnerManager, SIGNAL( searchFinished( QString ) ),

@@ -98,7 +98,7 @@ RoutingManagerPrivate::RoutingManagerPrivate( MarbleModel *model, RoutingManager
         m_profilesModel( model->pluginManager() ),
         m_marbleModel( model ),
         m_alternativeRoutesModel( parent ),
-        m_runnerManager( model->pluginManager(), q ),
+        m_runnerManager( model, q ),
         m_haveRoute( false ),
         m_adjustNavigation( 0 ),
         m_guidanceModeEnabled( false ),
@@ -108,7 +108,6 @@ RoutingManagerPrivate::RoutingManagerPrivate( MarbleModel *model, RoutingManager
         m_routeColorHighlighted( oxygenSeaBlue2 ),
         m_routeColorAlternative( oxygenAluminumGray4 )
 {
-    m_runnerManager.setModel( model );
     m_routeColorStandard.setAlpha( 200 );
     m_routeColorHighlighted.setAlpha( 200 );
     m_routeColorAlternative.setAlpha( 200 );

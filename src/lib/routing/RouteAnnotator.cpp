@@ -23,7 +23,7 @@ public:
 
     const GeoDataDocument* m_base;
 
-    MarbleRunnerManager* m_manager;
+    MarbleReverseGeocoding* m_manager;
 
     QVector<GeoDataPlacemark> m_placemarks;
 
@@ -52,7 +52,7 @@ RouteAnnotator::~RouteAnnotator()
 void RouteAnnotator::run()
 {
     if ( !d->m_manager ) {
-        d->m_manager = new MarbleRunnerManager( d->m_marbleModel->pluginManager(), this );
+        d->m_manager = new MarbleReverseGeocoding( d->m_marbleModel, this );
         connect( d->m_manager, SIGNAL( reverseGeocodingFinished( GeoDataCoordinates, GeoDataPlacemark ) ),
                  this, SLOT( retrieveGeocodeResult( GeoDataCoordinates, GeoDataPlacemark ) ) );
     }

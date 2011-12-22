@@ -41,7 +41,7 @@ using namespace Marble;
 /* TRANSLATOR Marble::MarbleWidgetPopupMenu */
 
 MarbleWidgetPopupMenu::MarbleWidgetPopupMenu(MarbleWidget *widget, 
-                                         const MarbleModel *model)
+                                         MarbleModel *model)
     : QObject(widget),
       m_model(model),
       m_widget(widget),
@@ -390,7 +390,7 @@ bool MarbleWidgetPopupMenu::mouseCoordinates( GeoDataCoordinates* coordinates, Q
 void MarbleWidgetPopupMenu::startReverseGeocoding()
 {
     if ( !m_runnerManager ) {
-        m_runnerManager = new MarbleRunnerManager( m_model->pluginManager(), this );
+        m_runnerManager = new MarbleReverseGeocoding( m_model, this );
         connect( m_runnerManager, SIGNAL( reverseGeocodingFinished( GeoDataCoordinates, GeoDataPlacemark ) ),
                  this, SLOT(showAddressInformation( GeoDataCoordinates, GeoDataPlacemark) ) );
     }
