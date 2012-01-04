@@ -266,6 +266,7 @@ if(NOT APPLE AND NOT WIN32)
     install (FILES icons/hi32-app-marble.png DESTINATION ${ICON_INSTALL_DIR}/hicolor/32x32/apps/ RENAME marble.png)
     install (FILES icons/hi22-app-marble.png DESTINATION ${ICON_INSTALL_DIR}/hicolor/22x22/apps/ RENAME marble.png)
     install (FILES icons/hi16-app-marble.png DESTINATION ${ICON_INSTALL_DIR}/hicolor/16x16/apps/ RENAME marble.png)
+    install (FILES svg/marble-harmattan-launcher.svg DESTINATION ${CMAKE_INSTALL_PREFIX}/share/themes/base/meegotouch/icons/ RENAME marble.svg)
 endif(NOT APPLE AND NOT WIN32 )
 
 FILE (GLOB AUDIO_FILES audio/*.ogg)

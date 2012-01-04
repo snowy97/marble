@@ -1,7 +1,6 @@
 [Desktop Entry]
 Type=Application
-TryExec=marble
-Exec=marble
+Exec=/usr/bin/single-instance /usr/bin/marble-touch
 Name=Marble
 Name[ast]=Marble
 Name[bg]=Marble
@@ -111,7 +110,5 @@ GenericName[uk]=Настільний глобус
 GenericName[x-test]=xxDesktop Globexx
 GenericName[zh_CN]=桌面地球仪
 GenericName[zh_TW]=桌面星象儀
-Icon=marble
+Icon=/usr/share/themes/base/meegotouch/icons/marble.svg
 Terminal=false
-Categories=Qt;KDE;Education;Geography;
-X-DocPath=marble/index.html
