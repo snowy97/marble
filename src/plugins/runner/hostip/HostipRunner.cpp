@@ -67,8 +67,15 @@ void HostipRunner::slotLookupFinished(const QHostInfo &info)
         QString query = QString( "http://api.hostip.info/get_html.php?ip=%1&position=true" ).arg( hostAddress );
         m_request.setUrl( QUrl( query ) );
 
+        QEventLoop eventLoop;
+
+        connect( this, SIGNAL( searchFinished( QVector<GeoDataPlacemark*> ) ),
+                 &eventLoop, SLOT( quit() ) );
+
         // @todo FIXME Must currently be done in the main thread, see bug 257376
         QTimer::singleShot( 0, this, SLOT( get() ) );
+
+        eventLoop.exec();
     }
     else
       slotNoResults();

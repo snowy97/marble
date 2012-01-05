@@ -27,20 +27,7 @@ RunnerTask::RunnerTask( MarbleAbstractRunner* runner ) :
 
 void RunnerTask::run()
 {
-    QTimer watchdog;
-    watchdog.setSingleShot( true );
-    QEventLoop localEventLoop;
-    QObject::connect( &watchdog, SIGNAL( timeout() ), &localEventLoop, SLOT( quit() ) );
-    runTask( &localEventLoop );
-    watchdog.start( 30 * 1000 );
-    QObject::connect( QCoreApplication::instance(), SIGNAL( aboutToQuit() ), &localEventLoop, SLOT( quit() ) );
-    localEventLoop.exec();
-
-    if( watchdog.isActive() ) {
-        watchdog.stop(); // completed within timeout
-    } else {
-        mDebug() << "Timeout reached while waiting for result. Killing the runner.";
-    }
+    runTask();
 
     runner()->deleteLater();
     emit finished( this );
@@ -57,10 +44,8 @@ SearchTask::SearchTask(MarbleAbstractRunner* runner, const QString &searchTerm) 
     // nothing to do
 }
 
-void SearchTask::runTask( QEventLoop *localEventLoop )
+void SearchTask::runTask()
 {
-    QObject::connect( runner(), SIGNAL( searchFinished( QVector<GeoDataPlacemark*> ) ),
-            localEventLoop, SLOT( quit() ) );
     runner()->search( m_searchTerm );
 }
 
@@ -70,10 +55,8 @@ ReverseGeocodingTask::ReverseGeocodingTask( MarbleAbstractRunner* runner, const 
     // nothing to do
 }
 
-void ReverseGeocodingTask::runTask( QEventLoop *localEventLoop )
+void ReverseGeocodingTask::runTask()
 {
-    QObject::connect( runner(), SIGNAL( reverseGeocodingFinished( GeoDataCoordinates, GeoDataPlacemark) ),
-            localEventLoop, SLOT( quit() ) );
     runner()->reverseGeocoding( m_coordinates );
 }
 
@@ -83,10 +66,8 @@ RoutingTask::RoutingTask( MarbleAbstractRunner* runner, const RouteRequest* rout
     // nothing to do
 }
 
-void RoutingTask::runTask( QEventLoop *localEventLoop )
+void RoutingTask::runTask()
 {
-    QObject::connect( runner(), SIGNAL( routeCalculated( GeoDataDocument*) ),
-            localEventLoop, SLOT( quit() ) );
     runner()->retrieveRoute( m_routeRequest );
 }
 
@@ -96,10 +77,8 @@ ParsingTask::ParsingTask( MarbleAbstractRunner* runner, const QString& fileName,
     // nothing to do
 }
 
-void ParsingTask::runTask( QEventLoop *localEventLoop )
+void ParsingTask::runTask()
 {
-    QObject::connect( runner(), SIGNAL( parsingFinished(GeoDataDocument*) ),
-                      localEventLoop, SLOT( quit() ) );
     runner()->parseFile( m_fileName, m_role );
 }
 
