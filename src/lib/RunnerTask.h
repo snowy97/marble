@@ -44,7 +44,7 @@ Q_SIGNALS:
 
 protected:
     /** Derived classes should execute their task and quit the provided event loop when done */
-    virtual void runTask( QEventLoop *localEventLoop ) = 0;
+    virtual void runTask() = 0;
 
     /** Access to the runner for derived classes */
     MarbleAbstractRunner* runner();
@@ -59,7 +59,7 @@ class SearchTask : public RunnerTask
 public:
     SearchTask( MarbleAbstractRunner* runner, const QString &searchTerm );
 
-    virtual void runTask( QEventLoop *localEventLoop );
+    virtual void runTask();
 
 private:
   QString m_searchTerm;
@@ -71,7 +71,7 @@ class ReverseGeocodingTask : public RunnerTask
 public:
     ReverseGeocodingTask( MarbleAbstractRunner* runner, const GeoDataCoordinates &coordinates );
 
-    virtual void runTask( QEventLoop *localEventLoop );
+    virtual void runTask();
 
 private:
   GeoDataCoordinates m_coordinates;
@@ -84,7 +84,7 @@ class RoutingTask : public RunnerTask
 public:
     RoutingTask( MarbleAbstractRunner* runner, const RouteRequest* routeRequest );
 
-    virtual void runTask( QEventLoop *localEventLoop );
+    virtual void runTask();
 
 private:
     const RouteRequest *const m_routeRequest;
@@ -96,7 +96,7 @@ class ParsingTask : public RunnerTask
 public:
     ParsingTask( MarbleAbstractRunner* runner, const QString& fileName, DocumentRole role );
 
-    virtual void runTask( QEventLoop *localEventLoop );
+    virtual void runTask();
 
 private:
   QString m_fileName;
