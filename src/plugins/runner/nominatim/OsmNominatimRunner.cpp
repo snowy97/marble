@@ -18,6 +18,7 @@
 #include "GeoDataExtendedData.h"
 #include "TinyWebBrowser.h"
 
+#include <QtCore/QMutex>
 #include <QtCore/QString>
 #include <QtCore/QVector>
 #include <QtCore/QUrl>
@@ -30,10 +31,10 @@ namespace Marble
 {
 
 OsmNominatimRunner::OsmNominatimRunner( QObject *parent ) :
-    MarbleAbstractRunner( parent ), m_manager( new QNetworkAccessManager (this ) )
+    MarbleAbstractRunner( parent ),
+    m_manager( new QNetworkAccessManager (this ) ),
+    m_reply( 0 )
 {
-    connect(m_manager, SIGNAL(finished(QNetworkReply*)),
-            this, SLOT(handleResult(QNetworkReply*)));
 }
 
 OsmNominatimRunner::~OsmNominatimRunner()
@@ -65,71 +66,34 @@ void OsmNominatimRunner::search( const QString &searchTerm )
     m_request.setUrl(QUrl(url));
     m_request.setRawHeader("User-Agent", TinyWebBrowser::userAgent("Browser", "OsmNominatimRunner") );
 
-    QEventLoop eventLoop;
-
-    connect( this, SIGNAL( searchFinished( QVector<GeoDataPlacemark*> ) ),
-             &eventLoop, SLOT( quit() ) );
+    QMutex mutex;
+    mutex.lock();
 
     // @todo FIXME Must currently be done in the main thread, see bug 257376
-    QTimer::singleShot( 0, this, SLOT( startSearch() ) );
+    QTimer::singleShot( 0, this, SLOT( get() ) );
 
-    eventLoop.exec();
-}
+    m_waitCondition.wait( &mutex );
 
-void OsmNominatimRunner::reverseGeocoding( const GeoDataCoordinates &coordinates )
-{
-    m_coordinates = coordinates;
-    QString base = "http://nominatim.openstreetmap.org/reverse?format=xml&addressdetails=1";
-    // @todo: Alternative URI with addressdetails=1 could be used for shorther placemark name
-    QString query = "&lon=%1&lat=%2&accept-language=%3";
-    double lon = coordinates.longitude( GeoDataCoordinates::Degree );
-    double lat = coordinates.latitude( GeoDataCoordinates::Degree );
-    QString url = QString( base + query ).arg( lon ).arg( lat ).arg( MarbleLocale::languageCode() );
+    forever {
+        m_reply->waitForReadyRead( -1 );
 
-    m_request.setUrl(QUrl(url));
-    m_request.setRawHeader("User-Agent", TinyWebBrowser::userAgent("Browser", "OsmNominatimRunner") );
-
-    QEventLoop eventLoop;
-
-    connect( this, SIGNAL( reverseGeocodingFinished( GeoDataCoordinates, GeoDataPlacemark ) ),
-             &eventLoop, SLOT( quit() ) );
-
-    // @todo FIXME Must currently be done in the main thread, see bug 257376
-    QTimer::singleShot( 0, this, SLOT( startReverseGeocoding() ) );
-
-    eventLoop.exec();
-}
-
-void OsmNominatimRunner::startSearch()
-{
-    QNetworkReply *reply = m_manager->get( m_request );
-    connect(reply, SIGNAL(error(QNetworkReply::NetworkError)),
-            this, SLOT(returnNoResults()));
-}
-
-void OsmNominatimRunner::startReverseGeocoding()
-{
-    QNetworkReply *reply = m_manager->get( m_request );
-    connect(reply, SIGNAL(error(QNetworkReply::NetworkError)),
-            this, SLOT(returnNoReverseGeocodingResult()));
-}
-
-void OsmNominatimRunner::handleResult( QNetworkReply* reply )
-{
-    bool const isSearch = reply->url().path().endsWith( "search" );
-    if ( isSearch ) {
-        handleSearchResult( reply );
-    } else {
-        handleReverseGeocodingResult( reply );
+        if ( m_reply->isFinished() )
+            break;
     }
-}
 
+    if ( m_reply->error() != QNetworkReply::NoError ) {
+        mDebug() << Q_FUNC_INFO << "Network error:" << m_reply->errorString();
+        returnNoResults();
+        return;
+    }
 
-void OsmNominatimRunner::handleSearchResult( QNetworkReply* reply )
-{   
+    QByteArray data = m_reply->readAll();
+    m_reply->deleteLater();
+    //mDebug() << Q_FUNC_INFO << "Download completed: " << data;
+
     QDomDocument xml;
-    if (!xml.setContent(reply->readAll())) {
-        qWarning() << "Cannot parse osm nominatim result";
+    if ( !xml.setContent( data ) ) {
+        mDebug() << Q_FUNC_INFO << "Cannot parse data:" << data;
         returnNoResults();
         return;
     }
@@ -218,20 +182,51 @@ void OsmNominatimRunner::handleSearchResult( QNetworkReply* reply )
             placemarks << placemark;
         }
     }
-    
+
     emit searchFinished( placemarks );
 }
 
-void OsmNominatimRunner::handleReverseGeocodingResult( QNetworkReply* reply )
+void OsmNominatimRunner::reverseGeocoding( const GeoDataCoordinates &coordinates )
 {
-    if ( !reply->bytesAvailable() ) {
+    m_coordinates = coordinates;
+    QString base = "http://nominatim.openstreetmap.org/reverse?format=xml&addressdetails=1";
+    // @todo: Alternative URI with addressdetails=1 could be used for shorther placemark name
+    QString query = "&lon=%1&lat=%2&accept-language=%3";
+    double lon = coordinates.longitude( GeoDataCoordinates::Degree );
+    double lat = coordinates.latitude( GeoDataCoordinates::Degree );
+    QString url = QString( base + query ).arg( lon ).arg( lat ).arg( MarbleLocale::languageCode() );
+
+    m_request.setUrl(QUrl(url));
+    m_request.setRawHeader("User-Agent", TinyWebBrowser::userAgent("Browser", "OsmNominatimRunner") );
+
+    QMutex mutex;
+    mutex.lock();
+
+    // @todo FIXME Must currently be done in the main thread, see bug 257376
+    QTimer::singleShot( 0, this, SLOT( get() ) );
+
+    m_waitCondition.wait( &mutex );
+
+    forever {
+        m_reply->waitForReadyRead( -1 );
+
+        if ( m_reply->isFinished() )
+            break;
+    }
+
+    if ( m_reply->error() != QNetworkReply::NoError ) {
+        mDebug() << Q_FUNC_INFO << "Network error:" << m_reply->errorString();
         returnNoReverseGeocodingResult();
         return;
     }
 
+    QByteArray data = m_reply->readAll();
+    m_reply->deleteLater();
+    //mDebug() << Q_FUNC_INFO << "Download completed: " << data;
+
     QDomDocument xml;
-    if ( !xml.setContent( reply->readAll() ) ) {
-        mDebug() << "Cannot parse osm nominatim result " << xml.toString();
+    if ( !xml.setContent( data ) ) {
+        mDebug() << Q_FUNC_INFO << "Cannot parse data:" << data;
         returnNoReverseGeocodingResult();
         return;
     }
@@ -262,6 +257,12 @@ void OsmNominatimRunner::handleReverseGeocodingResult( QNetworkReply* reply )
     } else {
         returnNoReverseGeocodingResult();
     }
+}
+
+void OsmNominatimRunner::get()
+{
+    m_reply = m_manager->get( m_request );
+    m_waitCondition.wakeAll();
 }
 
 void OsmNominatimRunner::addData( const QDomNodeList &node, const QString &key, GeoDataExtendedData *extendedData )

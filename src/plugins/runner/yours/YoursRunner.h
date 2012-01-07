@@ -15,6 +15,7 @@
 #include "MarbleAbstractRunner.h"
 #include "routing/RouteRequest.h"
 
+#include <QtCore/QWaitCondition>
 #include <QtNetwork/QNetworkReply>
 
 class QNetworkAccessManager;
@@ -38,12 +39,6 @@ public:
     virtual void retrieveRoute( const RouteRequest *request );
 
 private Q_SLOTS:
-    /** Route data was retrieved via http */
-    void retrieveData( QNetworkReply *reply );
-
-    /** A network error occurred */
-    void handleError( QNetworkReply::NetworkError );
-
     void get();
 
 private:
@@ -54,6 +49,10 @@ private:
     QNetworkAccessManager *m_networkAccessManager;
 
     QNetworkRequest m_request;
+
+    QWaitCondition m_waitCondition;
+
+    QNetworkReply *m_reply;
 };
 
 }

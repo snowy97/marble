@@ -17,6 +17,7 @@
 #include "GeoDataPlacemark.h"
 #include "TinyWebBrowser.h"
 
+#include <QtCore/QMutex>
 #include <QtCore/QString>
 #include <QtCore/QVector>
 #include <QtCore/QUrl>
@@ -31,10 +32,9 @@ namespace Marble
 
 OpenRouteServiceRunner::OpenRouteServiceRunner( QObject *parent ) :
         MarbleAbstractRunner( parent ),
-        m_networkAccessManager( new QNetworkAccessManager( this ) )
+        m_networkAccessManager( new QNetworkAccessManager( this ) ),
+        m_reply( 0 )
 {
-    connect( m_networkAccessManager, SIGNAL( finished( QNetworkReply * ) ),
-             this, SLOT( retrieveData( QNetworkReply * ) ) );
 }
 
 OpenRouteServiceRunner::~OpenRouteServiceRunner()
@@ -89,43 +89,43 @@ void OpenRouteServiceRunner::retrieveRoute( const RouteRequest *route )
     m_request.setHeader( QNetworkRequest::ContentTypeHeader, "application/xml" );
     m_requestData = request.toLatin1();
 
-    QEventLoop eventLoop;
-
-    connect( this, SIGNAL( routeCalculated( GeoDataDocument* ) ),
-             &eventLoop, SLOT( quit() ) );
+    QMutex mutex;
+    mutex.lock();
 
     // @todo FIXME Must currently be done in the main thread, see bug 257376
     QTimer::singleShot( 0, this, SLOT( get() ) );
 
-    eventLoop.exec();
+    m_waitCondition.wait( &mutex );
+
+    forever {
+        m_reply->waitForReadyRead( -1 );
+
+        if ( m_reply->isFinished() )
+            break;
+    }
+
+    if ( m_reply->error() != QNetworkReply::NoError ) {
+        mDebug() << Q_FUNC_INFO << "Network error:" << m_reply->errorString();
+        emit routeCalculated( 0 );
+        return;
+    }
+
+    QByteArray data = m_reply->readAll();
+    m_reply->deleteLater();
+    //mDebug() << Q_FUNC_INFO << "Download completed: " << data;
+    GeoDataDocument* document = parse( data );
+
+    if ( !document ) {
+        mDebug() << Q_FUNC_INFO << "Failed to parse the downloaded route data" << data;
+    }
+
+    emit routeCalculated( document );
 }
 
 void OpenRouteServiceRunner::get()
 {
-    QNetworkReply *reply = m_networkAccessManager->post( m_request, m_requestData );
-    connect( reply, SIGNAL( error( QNetworkReply::NetworkError ) ),
-             this, SLOT( handleError( QNetworkReply::NetworkError ) ), Qt::DirectConnection );
-}
-
-void OpenRouteServiceRunner::retrieveData( QNetworkReply *reply )
-{
-    if ( reply->isFinished() ) {
-        QByteArray data = reply->readAll();
-        reply->deleteLater();
-        //mDebug() << "Download completed: " << data;
-        GeoDataDocument* document = parse( data );
-
-        if ( !document ) {
-            mDebug() << "Failed to parse the downloaded route data" << data;
-        }
-
-        emit routeCalculated( document );
-    }
-}
-
-void OpenRouteServiceRunner::handleError( QNetworkReply::NetworkError error )
-{
-    mDebug() << " Error when retrieving openrouteservice.org route: " << error;
+    m_reply = m_networkAccessManager->post( m_request, m_requestData );
+    m_waitCondition.wakeAll();
 }
 
 QString OpenRouteServiceRunner::xmlHeader() const

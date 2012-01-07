@@ -16,10 +16,11 @@
 #include "routing/RouteRequest.h"
 
 #include <QtCore/QString>
-#include <QtNetwork/QNetworkReply>
-#include <QtNetwork/QHostInfo>
+#include <QtCore/QWaitCondition>
+#include <QtNetwork/QNetworkRequest>
 
 class QNetworkAccessManager;
+class QNetworkReply;
 
 namespace Marble
 {
@@ -46,12 +47,6 @@ public:
     virtual void retrieveRoute( const RouteRequest *request );
 
 private Q_SLOTS:
-    /** Route data was retrieved via http */
-    void retrieveData( QNetworkReply *reply );
-
-    /** A network error occurred */
-    void handleError( QNetworkReply::NetworkError );
-
     void get();
 
 private:
@@ -77,6 +72,10 @@ private:
     QNetworkRequest m_request;
 
     QByteArray m_requestData;
+
+    QWaitCondition m_waitCondition;
+
+    QNetworkReply *m_reply;
 };
 
 }

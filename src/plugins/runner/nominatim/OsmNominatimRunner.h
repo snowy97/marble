@@ -15,7 +15,7 @@
 #include "MarbleAbstractRunner.h"
 
 #include <QtCore/QString>
-#include <QtNetwork/QHostInfo>
+#include <QtCore/QWaitCondition>
 #include <QtNetwork/QNetworkRequest>
 
 class QNetworkReply;
@@ -42,23 +42,12 @@ public:
     virtual void search( const QString &searchTerm );
 
 private Q_SLOTS:
-    // Forward a result to the search or reverse geocoding handler
-    void handleResult( QNetworkReply* );
-
-    // Http search request with nominatim.openstreetmap.org done
-    void handleSearchResult( QNetworkReply* );
-
-    // Http reverse geocoding request with nominatim.openstreetmap.org done
-    void handleReverseGeocodingResult( QNetworkReply* );
+    void get();
 
     // No results (or an error)
     void returnNoResults();
 
     void returnNoReverseGeocodingResult();
-
-    void startSearch();
-
-    void startReverseGeocoding();
 
 private:
     void addData( const QDomNodeList &node, const QString &key, GeoDataExtendedData *extendedData );
@@ -68,6 +57,10 @@ private:
     QNetworkRequest m_request;
 
     GeoDataCoordinates m_coordinates;
+
+    QWaitCondition m_waitCondition;
+
+    QNetworkReply *m_reply;
 };
 
 }

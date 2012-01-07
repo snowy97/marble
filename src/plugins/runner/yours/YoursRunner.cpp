@@ -19,6 +19,7 @@
 #include "GeoDataParser.h"
 #include "GeoDataFolder.h"
 
+#include <QtCore/QMutex>
 #include <QtCore/QString>
 #include <QtCore/QVector>
 #include <QtCore/QUrl>
@@ -34,10 +35,9 @@ namespace Marble
 
 YoursRunner::YoursRunner( QObject *parent ) :
         MarbleAbstractRunner( parent ),
-        m_networkAccessManager( new QNetworkAccessManager( this ) )
+        m_networkAccessManager( new QNetworkAccessManager( this ) ),
+        m_reply( 0 )
 {
-    connect( m_networkAccessManager, SIGNAL( finished( QNetworkReply* ) ),
-             this, SLOT( retrieveData( QNetworkReply* ) ) );
 }
 
 YoursRunner::~YoursRunner()
@@ -75,53 +75,60 @@ void YoursRunner::retrieveRoute( const RouteRequest *route )
 
     m_request = QNetworkRequest( QUrl( request ) );
 
-    QEventLoop eventLoop;
-
-    connect( this, SIGNAL( routeCalculated( GeoDataDocument* ) ),
-             &eventLoop, SLOT( quit() ) );
+    QMutex mutex;
+    mutex.lock();
 
     // @todo FIXME Must currently be done in the main thread, see bug 257376
     QTimer::singleShot( 0, this, SLOT( get() ) );
 
-    eventLoop.exec();
+    m_waitCondition.wait( &mutex );
+
+    forever {
+        m_reply->waitForReadyRead( -1 );
+
+        if ( m_reply->isFinished() )
+            break;
+    }
+
+    if ( m_reply->error() != QNetworkReply::NoError ) {
+        mDebug() << Q_FUNC_INFO << "Network error:" << m_reply->errorString();
+        emit routeCalculated( 0 );
+        return;
+    }
+
+    QByteArray data = m_reply->readAll();
+    m_reply->deleteLater();
+    //mDebug() << Q_FUNC_INFO << "Download completed: " << data;
+
+    GeoDataDocument* result = parse( data );
+    if ( !result ) {
+        emit routeCalculated( 0 );
+        return;
+    }
+
+    qreal length = distance( result );
+    if ( length == 0.0 ) {
+        delete result;
+        emit routeCalculated( 0 );
+        return;
+    }
+
+    QString unit = "m";
+    if ( length >= 1000 ) {
+        length /= 1000.0;
+        unit = "km";
+    }
+
+    QString name = "%1 %2 (Yours)";
+    result->setName( name.arg( length, 0, 'f', 1 ).arg( unit ) );
+
+    emit routeCalculated( result );
 }
 
 void YoursRunner::get()
 {
-    QNetworkReply *reply = m_networkAccessManager->get( m_request );
-    connect( reply, SIGNAL( error( QNetworkReply::NetworkError ) ),
-             this, SLOT( handleError( QNetworkReply::NetworkError ) ) );
-}
-
-void YoursRunner::retrieveData( QNetworkReply *reply )
-{
-    if ( reply->isFinished() ) {
-        QByteArray data = reply->readAll();
-        reply->deleteLater();
-        //mDebug() << "Download completed: " << data;
-        GeoDataDocument* result = parse( data );
-        if ( result ) {
-            QString name = "%1 %2 (Yours)";
-            QString unit = "m";
-            qreal length = distance( result );
-            if ( length == 0.0 ) {
-                delete result;
-                emit routeCalculated( 0 );
-                return;
-            } else if ( length >= 1000 ) {
-                length /= 1000.0;
-                unit = "km";
-            }
-            result->setName( name.arg( length, 0, 'f', 1 ).arg( unit ) );
-        }
-        emit routeCalculated( result );
-    }
-}
-
-void YoursRunner::handleError( QNetworkReply::NetworkError error )
-{
-    mDebug() << " Error when retrieving yournavigation.org route: " << error;
-    emit routeCalculated( 0 );
+    m_reply = m_networkAccessManager->get( m_request );
+    m_waitCondition.wakeAll();
 }
 
 GeoDataDocument* YoursRunner::parse( const QByteArray &content ) const
