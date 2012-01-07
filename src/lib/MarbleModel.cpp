@@ -18,6 +18,7 @@
 
 #include <QtCore/QAtomicInt>
 #include <QtCore/QPointer>
+#include <QtCore/QThreadPool>
 #include <QtCore/QTime>
 #include <QtCore/QTimer>
 #include <QtCore/QAbstractItemModel>
@@ -185,6 +186,8 @@ MarbleModel::MarbleModel( QObject *parent )
 
 MarbleModel::~MarbleModel()
 {
+    QThreadPool::globalInstance()->waitForDone();
+
     delete d->m_fileManager;
     delete d->m_mapTheme;
     delete d->m_planet;
