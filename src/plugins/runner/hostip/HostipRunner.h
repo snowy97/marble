@@ -13,6 +13,7 @@
 #include "MarbleAbstractRunner.h"
 
 #include <QtCore/QString>
+#include <QtCore/QWaitCondition>
 #include <QtNetwork/QHostInfo>
 #include <QtNetwork/QNetworkRequest>
 
@@ -36,9 +37,6 @@ public:
 private Q_SLOTS:
     void get();
 
-    // Http request with hostip.info done
-    void slotRequestFinished( QNetworkReply* );
-
     // IP address lookup finished
     void slotLookupFinished(const QHostInfo &host);
 
@@ -53,6 +51,10 @@ private:
     QNetworkAccessManager *const m_networkAccessManager;
 
     QNetworkRequest m_request;
+
+    QWaitCondition m_waitCondition;
+
+    QNetworkReply *m_reply;
 };
 
 }
