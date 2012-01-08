@@ -213,7 +213,6 @@ void MarblePlacemarkSearch::findPlacemarks( const QString &searchTerm )
       emit searchResultChanged( d->m_model );
       emit searchResultChanged( d->m_placemarkContainer );
       emit searchFinished( searchTerm );
-      emit placemarkSearchFinished();
       return;
     }
 
@@ -230,7 +229,6 @@ void MarblePlacemarkSearch::findPlacemarks( const QString &searchTerm )
 
     if ( searchTerm.trimmed().isEmpty() ) {
         emit searchFinished( searchTerm );
-        emit placemarkSearchFinished();
         return;
     }
 
@@ -268,18 +266,8 @@ void MarblePlacemarkSearch::Private::addSearchResult( QVector<GeoDataPlacemark*>
     emit q->searchResultChanged( m_placemarkContainer );
 }
 
-QVector<GeoDataPlacemark*> MarblePlacemarkSearch::searchPlacemarks( const QString &searchTerm ) {
-    QEventLoop localEventLoop;
-    QTimer watchdog;
-    watchdog.setSingleShot(true);
-    connect( &watchdog, SIGNAL(timeout()),
-             &localEventLoop, SLOT(quit()));
-    connect(this, SIGNAL(placemarkSearchFinished()),
-            &localEventLoop, SLOT(quit()), Qt::QueuedConnection );
-
-    watchdog.start( 30000 );
-    findPlacemarks( searchTerm );
-    localEventLoop.exec();
+QVector<GeoDataPlacemark*> MarblePlacemarkSearch::foundPlacemarks() const
+{
     return d->m_placemarkContainer;
 }
 
@@ -294,21 +282,6 @@ void MarbleReverseGeocoding::Private::addReverseGeocodingResult( const GeoDataCo
     if ( m_reverseTasks.isEmpty() ) {
         emit q->reverseGeocodingFinished();
     }
-}
-
-QString MarbleReverseGeocoding::searchReverseGeocoding( const GeoDataCoordinates &coordinates ) {
-    QEventLoop localEventLoop;
-    QTimer watchdog;
-    watchdog.setSingleShot(true);
-    connect( &watchdog, SIGNAL(timeout()),
-             &localEventLoop, SLOT(quit()));
-    connect(this, SIGNAL(reverseGeocodingFinished()),
-            &localEventLoop, SLOT(quit()), Qt::QueuedConnection );
-
-    watchdog.start( 30000 );
-    reverseGeocoding( coordinates );
-    localEventLoop.exec();
-    return d->m_reverseGeocodingResult;
 }
 
 void MarbleRunnerManager::retrieveRoute( const RouteRequest *request )
@@ -349,21 +322,6 @@ void MarbleRunnerManager::Private::addRoutingResult( GeoDataDocument* route )
         m_routingResult.push_back( route );
         emit q->routeRetrieved( route );
     }
-}
-
-QVector<GeoDataDocument*> MarbleRunnerManager::searchRoute( const RouteRequest *request ) {
-    QEventLoop localEventLoop;
-    QTimer watchdog;
-    watchdog.setSingleShot(true);
-    connect( &watchdog, SIGNAL(timeout()),
-             &localEventLoop, SLOT(quit()));
-    connect(this, SIGNAL(routingFinished()),
-            &localEventLoop, SLOT(quit()), Qt::QueuedConnection );
-
-    watchdog.start( 30000 );
-    retrieveRoute( request );
-    localEventLoop.exec();
-    return d->m_routingResult;
 }
 
 class MarbleFileParser::Private
@@ -417,7 +375,7 @@ void MarbleFileParser::parseFile( const QString &fileName, DocumentRole role )
         QThreadPool::globalInstance()->start( task );
     }
 
-    if ( plugins.isEmpty() ) {
+    if ( d->m_parsingTasks.isEmpty() ) {
         emit parsingFinished( 0, "No plugin found");
         d->cleanupParsingTask( 0 );
     }
@@ -429,21 +387,6 @@ void MarbleFileParser::Private::addParsingResult( GeoDataDocument *document, con
         m_fileResult = document;
         emit q->parsingFinished( document, error );
     }
-}
-
-GeoDataDocument* MarbleFileParser::openFile( const QString &fileName, DocumentRole role ) {
-    QEventLoop localEventLoop;
-    QTimer watchdog;
-    watchdog.setSingleShot(true);
-    connect( &watchdog, SIGNAL(timeout()),
-             &localEventLoop, SLOT(quit()));
-    connect(this, SIGNAL(parsingFinished()),
-            &localEventLoop, SLOT(quit()), Qt::QueuedConnection );
-
-    watchdog.start( 30000 );
-    parseFile( fileName, role);
-    localEventLoop.exec();
-    return d->m_fileResult;
 }
 
 }

@@ -53,7 +53,6 @@ public:
       * @see routingFinished signal indicates all runners are finished.
       */
     void retrieveRoute( const RouteRequest *request );
-    QVector<GeoDataDocument*> searchRoute( const RouteRequest *request );
 
 Q_SIGNALS:
     /**
@@ -91,7 +90,8 @@ public:
     * @see searchFinished signal indicates all runners are finished.
     */
     void findPlacemarks( const QString& searchTerm );
-    QVector<GeoDataPlacemark*> searchPlacemarks( const QString& searchTerm );
+
+    QVector<GeoDataPlacemark*> foundPlacemarks() const;
 
 Q_SIGNALS:
     /**
@@ -107,10 +107,6 @@ Q_SIGNALS:
       * @see searchResultChanged signal
       */
     void searchFinished( const QString &searchTerm );
-
-    /** signal emitted whenever all runners are finished for the query
-      */
-    void placemarkSearchFinished();
 
 private:
     Q_PRIVATE_SLOT( d, void addSearchResult( QVector<GeoDataPlacemark*> result ) )
@@ -136,7 +132,6 @@ public:
       * @see reverseGeocodingFinished signal indicates all runners are finished.
       */
     void reverseGeocoding( const GeoDataCoordinates &coordinates );
-    QString searchReverseGeocoding( const GeoDataCoordinates &coordinates );
 
 Q_SIGNALS:
     /**
@@ -175,7 +170,6 @@ public:
       * @see parsingFinished signal indicates all runners are finished.
       */
     void parseFile( const QString& fileName, DocumentRole role = UserDocument );
-    GeoDataDocument* openFile( const QString& fileName, DocumentRole role = UserDocument );
 
 Q_SIGNALS:
     /**
