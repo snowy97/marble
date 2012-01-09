@@ -12,6 +12,8 @@
 
 #include "MarbleAbstractRunner.h"
 #include "MarbleDebug.h"
+#include "MarbleRunnerManager.h"
+#include "RunnerPlugin.h"
 #include "routing/RouteRequest.h"
 
 #include <QtCore/QTimer>
@@ -19,8 +21,9 @@
 namespace Marble
 {
 
-RunnerTask::RunnerTask( MarbleAbstractRunner* runner ) :
-        m_runner( runner )
+RunnerTask::RunnerTask( RunnerPlugin* factory, MarbleRunnerManager *manager ) :
+    m_factory( factory ),
+    m_manager( manager )
 {
     // nothing to do
 }
@@ -29,57 +32,88 @@ void RunnerTask::run()
 {
     runTask();
 
-    runner()->deleteLater();
     emit finished( this );
 }
 
-MarbleAbstractRunner* RunnerTask::runner()
+RunnerPlugin *RunnerTask::factory()
 {
-    return m_runner;
+    return m_factory;
 }
 
-SearchTask::SearchTask(MarbleAbstractRunner* runner, const QString &searchTerm) :
-        RunnerTask( runner ), m_searchTerm( searchTerm )
+MarbleRunnerManager *RunnerTask::manager()
+{
+    return m_manager;
+}
+
+SearchTask::SearchTask(RunnerPlugin* factory, MarbleRunnerManager *manager, MarbleModel *model, const QString &searchTerm) :
+    RunnerTask( factory, manager ),
+    m_model( model ),
+    m_searchTerm( searchTerm )
 {
     // nothing to do
 }
 
 void SearchTask::runTask()
 {
-    runner()->search( m_searchTerm );
+    MarbleAbstractRunner *runner = factory()->newRunner();
+    connect( runner, SIGNAL( searchFinished( QVector<GeoDataPlacemark*> ) ),
+             manager(), SLOT( addSearchResult( QVector<GeoDataPlacemark*> ) ) );
+    runner->setModel( m_model );
+    runner->search( m_searchTerm );
+    runner->deleteLater();
 }
 
-ReverseGeocodingTask::ReverseGeocodingTask( MarbleAbstractRunner* runner, const GeoDataCoordinates &coordinates ) :
-        RunnerTask( runner ), m_coordinates( coordinates )
+ReverseGeocodingTask::ReverseGeocodingTask( RunnerPlugin* factory, MarbleRunnerManager *manager, MarbleModel *model, const GeoDataCoordinates &coordinates ) :
+    RunnerTask( factory, manager ),
+    m_model( model ),
+    m_coordinates( coordinates )
 {
     // nothing to do
 }
 
 void ReverseGeocodingTask::runTask()
 {
-    runner()->reverseGeocoding( m_coordinates );
+    MarbleAbstractRunner *runner = factory()->newRunner();
+    connect( runner, SIGNAL( reverseGeocodingFinished( GeoDataCoordinates, GeoDataPlacemark ) ),
+             manager(), SLOT( addReverseGeocodingResult( GeoDataCoordinates, GeoDataPlacemark ) ) );
+    runner->setModel( m_model );
+    runner->reverseGeocoding( m_coordinates );
+    runner->deleteLater();
 }
 
-RoutingTask::RoutingTask( MarbleAbstractRunner* runner, const RouteRequest* routeRequest ) :
-        RunnerTask( runner ), m_routeRequest( routeRequest )
+RoutingTask::RoutingTask( RunnerPlugin* factory, MarbleRunnerManager *manager, MarbleModel *model, const RouteRequest* routeRequest ) :
+    RunnerTask( factory, manager ),
+    m_model( model ),
+    m_routeRequest( routeRequest )
 {
     // nothing to do
 }
 
 void RoutingTask::runTask()
 {
-    runner()->retrieveRoute( m_routeRequest );
+    MarbleAbstractRunner *runner = factory()->newRunner();
+    connect( runner, SIGNAL( routeCalculated( GeoDataDocument* ) ),
+             manager(), SLOT( addRoutingResult( GeoDataDocument* ) ) );
+    runner->setModel( m_model );
+    runner->retrieveRoute( m_routeRequest );
+    runner->deleteLater();
 }
 
-ParsingTask::ParsingTask( MarbleAbstractRunner* runner, const QString& fileName, DocumentRole role ) :
-        RunnerTask( runner ), m_fileName( fileName ), m_role( role )
+ParsingTask::ParsingTask( RunnerPlugin *factory, MarbleRunnerManager *manager, const QString& fileName, DocumentRole role ) :
+    RunnerTask( factory, manager ),
+    m_fileName( fileName ),
+    m_role( role )
 {
     // nothing to do
 }
 
 void ParsingTask::runTask()
 {
-    runner()->parseFile( m_fileName, m_role );
+    MarbleAbstractRunner *runner = factory()->newRunner();
+    connect( runner, SIGNAL( parsingFinished( GeoDataDocument*, QString ) ),
+             manager(), SLOT( addParsingResult( GeoDataDocument*, QString ) ) );
+    runner->parseFile( m_fileName, m_role );
+    runner->deleteLater();
 }
 
 }
